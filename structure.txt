@@ -1,0 +1,46 @@
+BE/
+├── .env
+├── .gitignore
+├── uv.lock
+├── pyproject.toml
+├── scripts/
+│   ├── clean-cache.ps1
+│   ├── start.ps1
+│   └── starttest.ps1
+├── structure.txt
+├── resource/
+│   ├── llm_review_schema.drawio
+│   └── llm-review.postman_collection.json
+├── src/
+│   ├── config.py
+│   ├── container.py
+│   ├── controller.py
+│   ├── main.py
+│   ├── clients/
+│   │   └── llm/
+│   │       ├── base_llm_client.py
+│   │       ├── mock_llm_client.py
+│   │       └── ollama_llm_client.py
+│   ├── schemas/
+│   │   ├── base.py
+│   │   ├── controller.py
+│   │   ├── enums.py
+├── test/
+│   └── test_controller/
+│       └── test_test_llm.py
+├── ui/
+│   ├── index.html
+│   ├── css/
+│   │   ├── components.css
+│   │   ├── health.css
+│   │   ├── layout.css
+│   │   ├── reset.css
+│   │   ├── test-llm.css
+│   │   └── variables.css
+│   └── js/
+│       ├── api.js
+│       ├── app.js
+│       ├── router.js
+│       └── sections/
+│           ├── health.js
+│           └── testllm.js

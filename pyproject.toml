@@ -1,0 +1,36 @@
+[project]
+name = "llm-review"
+version = "0.1.0"
+description = "LLM review backend with LangGraph and LangChain"
+requires-python = ">=3.12"
+dependencies = [
+	"fastapi>=0.115",
+	"uvicorn[standard]>=0.34",
+	"pydantic>=2.10",
+	"langchain>=0.3",
+	"langgraph>=0.3",
+	"langchain-openai>=0.3",
+	"langchain-anthropic>=0.3",
+	"langchain-google-genai>=2.1",
+	"langchain-ollama>=0.3",
+	"pydantic-settings>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+	"pytest>=8.3",
+	"pytest-asyncio>=0.25",
+	"httpx>=0.28",
+]
+
+[build-system]
+requires = ["hatchling>=1.26.3"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+managed = true
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+asyncio_mode = "auto"

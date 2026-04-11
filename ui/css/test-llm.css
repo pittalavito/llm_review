@@ -1,0 +1,199 @@
+/* ═══════════════════════════════════════════════════════
+   test-llm.css — styles specific to the Test LLM section
+   Academic Journal Review theme
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Section wrapper ──────────────────────────────────── */
+.test-llm-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Model selector bar ───────────────────────────────── */
+.test-llm-model-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-6);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+.test-llm-model-bar__label {
+  font-family: var(--font-serif);
+  font-size: var(--text-sm);
+  color: var(--c-text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.test-llm-model-bar__select {
+  background: var(--c-surface-raised);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  padding: var(--s-2) var(--s-4);
+  color: var(--c-text-primary);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.test-llm-model-bar__select:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px rgba(197, 165, 90, 0.15);
+  outline: none;
+}
+
+.test-llm-model-bar__select option {
+  background: var(--c-surface);
+  color: var(--c-text-primary);
+}
+
+/* ── Messages area ────────────────────────────────────── */
+.test-llm-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s-8) var(--s-10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  scroll-behavior: smooth;
+}
+
+/* ── Welcome placeholder ──────────────────────────────── */
+.test-llm-welcome {
+  margin: auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-4);
+  color: var(--c-text-muted);
+  max-width: 360px;
+}
+
+.test-llm-welcome__icon {
+  font-size: 2.8rem;
+  opacity: 0.7;
+}
+
+.test-llm-welcome__heading {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--c-text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.test-llm-welcome__text {
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--c-text-muted);
+}
+
+/* ── Message bubbles — review comments ────────────────── */
+.test-llm-bubble {
+  max-width: 70%;
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-lg);
+  font-size: var(--text-base);
+  line-height: 1.65;
+  box-shadow: var(--shadow-sm);
+  animation: bubble-in var(--t-base) ease both;
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.test-llm-bubble--user {
+  align-self: flex-end;
+  background: var(--c-bubble-user);
+  color: #dce4f0;
+  border-bottom-right-radius: var(--r-sm);
+  border-left: 3px solid rgba(197, 165, 90, 0.3);
+}
+
+.test-llm-bubble--bot {
+  align-self: flex-start;
+  background: var(--c-bubble-bot);
+  color: var(--c-text-primary);
+  border: 1px solid var(--c-border);
+  border-bottom-left-radius: var(--r-sm);
+  border-left: 3px solid var(--c-accent);
+}
+
+.test-llm-bubble--error {
+  border-color: var(--c-error);
+  border-left-color: var(--c-error);
+  color: var(--c-error);
+}
+
+/* ── Loading dots ─────────────────────────────────────── */
+.loading-dots {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  height: 1.2em;
+}
+
+.loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c-accent);
+  animation: dot-pulse 1.4s infinite ease-in-out both;
+}
+
+.loading-dots span:nth-child(1) { animation-delay: 0.0s; }
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { transform: scale(0.8); opacity: 0.35; }
+  40%           { transform: scale(1.1); opacity: 1.0;  }
+}
+
+/* ── Input bar ────────────────────────────────────────── */
+.test-llm-input-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-6);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+.test-llm-input {
+  flex: 1;
+  background: var(--c-surface-raised);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-full);
+  padding: var(--s-3) var(--s-5);
+  color: var(--c-text-primary);
+  font-size: var(--text-base);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.test-llm-input:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px rgba(197, 165, 90, 0.12);
+}
+
+.test-llm-input::placeholder {
+  color: var(--c-text-muted);
+  font-style: italic;
+}
+
+.test-llm-send-btn {
+  border-radius: var(--r-full);
+  padding: var(--s-3) var(--s-5);
+  flex-shrink: 0;
+}

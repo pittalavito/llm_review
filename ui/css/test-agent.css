@@ -1,0 +1,29 @@
+/* test-agent.css — styles for Test Agent section */
+
+.test-agent-section {
+  flex: 1;
+  padding: var(--s-10) var(--s-10);
+  overflow-y: auto;
+  max-width: 900px;
+}
+
+.test-agent-actions {
+  display: flex;
+  gap: var(--s-3);
+  margin-bottom: var(--s-6);
+}
+
+#test-agent-post-btn {
+  border: 1px solid var(--c-border);
+  color: var(--c-text-secondary);
+}
+
+#test-agent-post-btn:hover:not(:disabled) {
+  border-color: var(--c-accent);
+  color: var(--c-text-primary);
+  background: rgba(197, 165, 90, 0.06);
+}
+
+.test-agent-response[hidden] {
+  display: none;
+}
