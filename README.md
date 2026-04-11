@@ -28,36 +28,11 @@ LLM-based multi-agent framework for reviewing scientific articles
 
 ## Next step
 
-Implement a real `Review Agent` and its related tool integration:
-- add agent registry in backend container
-- define agent input/output schemas
-- implement at least one production agent endpoint (replacing current placeholder)
 - connect the UI `Test Agent` section to real payloads and results
 - add integration tests for agent + tool flow
-
-## Quick start (Windows + uv)
-
-```powershell
-python -m pip install uv
-./scripts/run-app.ps1
-```
-
-## Run tests
-
-```powershell
-./scripts/run-test.ps1
-```
-
-## Stop app instances
-
-```powershell
-./scripts/stop-app.ps1 -Preview
-./scripts/stop-app.ps1
-```
-
-## Clean Python cache artifacts
-
-```powershell
-./scripts/clean-cache.ps1 -Preview
-./scripts/clean-cache.ps1
-```
+- create Technical Reviewer (Correctness & Quality)
+	- Main responsibility: verify that content is technically and logically correct and internally consistent.
+- create Style & Readability Reviewer (Communication)
+	- Main responsibility: verify that the text is clear, readable, and communicatively effective.
+- define additional reviewer roles and responsibilities as needed.
+- ........
