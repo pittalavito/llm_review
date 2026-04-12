@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class Config(BaseSettings):
+class Settings(BaseSettings):
     """Configuration class for the application. Loads settings from environment variables and .env file."""
 
     model_config = SettingsConfigDict(

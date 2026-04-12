@@ -6,5 +6,5 @@ MOCK_RESPONSE_PREFIX = "Here is a mock response for your prompt: "
 class MockLLMClient(BaseLLMClient):
     """Mock client for testing the entire flow without external dependencies."""
 
-    def generate(self, prompt: str) -> str:
+    def call(self, prompt: str) -> str:
         return f"{MOCK_RESPONSE_PREFIX}{prompt}"
