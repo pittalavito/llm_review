@@ -1,27 +1,34 @@
-import logging
+
+import asyncio
 
 from fastapi import Request
-from service.llm_remote_service import LLMRemoteService
+from service.graph_service import GraphService
+from service.llm_service import LlmService
 from settings import Settings
-from schemas.enums import LlmModelName
+
 
 class Container:
     """DI container for configuration and LLM client registry."""
     def __init__(self, settings: Settings):        
         self.settings = settings
-        self.llm_remote_service = LLMRemoteService(settings)
+        self.llm_service = LlmService(settings)
+        self.graph_service = GraphService()
 
-
-def get_container(request: Request) -> Container:
+def inject_container(request: Request) -> Container:
     """Dependency to retrieve the DI container from the request state."""
     return request.app.state.container
 
-def get_settings(request: Request) -> Settings:
+def inject_settings(request: Request) -> Settings:
     """Dependency to retrieve the application settings from the container."""
-    container = get_container(request)
+    container = inject_container(request)
     return container.settings   
 
-def get_llm_remote_service(request: Request) -> LLMRemoteService:
-    """Dependency to retrieve the LLM client for a given model name."""
-    container = get_container(request)
-    return container.llm_remote_service
+def inject_llm_service(request: Request) -> LlmService:
+    """Dependency to retrieve the LLM service from the container."""
+    container = inject_container(request)
+    return container.llm_service
+
+def inject_graph_service(request: Request) -> GraphService:
+    """Dependency to retrieve the Graph service from the container."""
+    container = inject_container(request)
+    return container.graph_service

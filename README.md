@@ -11,14 +11,13 @@ LLM-based multi-agent framework for reviewing scientific articles
 - FastAPI app with health endpoint: `GET /health`
 - Available model listing: `GET /models`
 - LLM test endpoint: `POST /test-llm`
-- Agent test placeholder endpoints:
-	- `GET /test-agent`
-	- `POST /test-agent`
+- Available agent listing: `GET /agents`
+- Agent test endpoint: `POST /agents`
 
 ### UI
 - `System Status` section for `/health`
 - `Test LLM` section for `/models` + `/test-llm`
-- `Test Agent` section for `/test-agent` (GET/POST)
+- `Test Agent` section for `/agents` with guided payload submission
 
 ### Tooling
 - Run app: `./scripts/run-app.ps1`
@@ -28,7 +27,6 @@ LLM-based multi-agent framework for reviewing scientific articles
 
 ## Next step
 
-- connect the UI `Test Agent` section to real payloads and results
 - add integration tests for agent + tool flow
 - create Technical Reviewer (Correctness & Quality)
 	- Main responsibility: verify that content is technically and logically correct and internally consistent.

@@ -1,17 +1,27 @@
 from enum import StrEnum
-
-class OllamaModelName(StrEnum):
-    TINYLLAMA = "tinyllama:1.1b"
-    LLAMA32 = "llama3.2:3b"
-
-class OpenApiModelName(StrEnum):
-    GPT_3_5_TURBO = "gpt-3.5-turbo"
-    GPT_4 = "gpt-4"
-
+    
+    
 class LlmModelName(StrEnum):
     MOCK = "mock"
-    OLLAMA_TYNYLLAMA = OllamaModelName.TINYLLAMA
-    OLLAMA_LLAMA32 = OllamaModelName.LLAMA32
-    OPENAPI_GPT_3_5_TURBO = OpenApiModelName.GPT_3_5_TURBO
-    OPENAPI_GPT_4 = OpenApiModelName.GPT_4    
-
+    OLLAMA_TINYLLAMA = "tinyllama:1.1b"
+    OLLAMA_LLAMA32 = "llama3.2:3b"
+    OLLAMA_GROQ_TOOL_USE = "llama3-groq-tool-use"
+    OPENAPI_GPT_3_5_TURBO = "gpt-3.5-turbo"
+    OPENAPI_GPT_4 = "gpt-4"
+    
+    def is_ollama(self) -> bool:
+        return self in {self.OLLAMA_TINYLLAMA, self.OLLAMA_LLAMA32, self.OLLAMA_GROQ_TOOL_USE}
+    
+    def is_openapi(self) -> bool:
+        return self in {self.OPENAPI_GPT_3_5_TURBO, self.OPENAPI_GPT_4}
+    
+    def is_mock(self) -> bool:
+        return self == self.MOCK
+    
+class AgentName(StrEnum):
+    TEST_TOOL_AGENT = "test_tool_agent"
+    METHODOLOGY_REVIEWER = "methodology_reviewer"
+    
+class GraphNodeName(StrEnum):
+    """Graph node name enum."""
+    METHODOLOGY_REVIEWER = "methodology_reviewer"

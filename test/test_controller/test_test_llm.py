@@ -7,8 +7,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "src"))
 
 from fastapi.testclient import TestClient
-from main import app
 from clients.llm.mock_llm_client import MOCK_RESPONSE_PREFIX
+from main import app
 
 
 @pytest.fixture()
@@ -32,19 +32,43 @@ def test_models_endpoint(client):
     assert "mock" in data
 
 
+def test_test_agent_list_endpoint(client):
+    response = client.get("/agents")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert "test_tool_agent" in data
+
+
+def test_test_agent_with_mock_model_and_multiline_message(client):
+    response = client.post(
+        "/agents",
+        json={
+            "name": "test_tool_agent",
+            "model": "mock",
+            "temperature": 0.7,
+            "message": "Hello world.\nThis is a multiline test message.",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, str)
+    assert data
+
+
 def test_test_llm_endpoint(client):
     response = client.post("/test-llm", json={"message": "ciao"})
-    assert response.status_code == 200
-    assert response.json()["response"] == f"{MOCK_RESPONSE_PREFIX}ciao"
+    assert response.status_code == 422
+    assert "model" in response.json()["detail"][0]["loc"]
 
 
 def test_test_llm_with_explicit_model(client):
-    response = client.post("/test-llm", json={"message": "ciao", "llm_model": "mock"})
+    response = client.post("/test-llm", json={"message": "ciao", "model": "mock"})
     assert response.status_code == 200
     assert response.json()["response"] == f"{MOCK_RESPONSE_PREFIX}ciao"
 
 
-def test_test_llm_with_unknown_model_falls_back(client):
-    response = client.post("/test-llm", json={"message": "ciao", "llm_model": "nonexistent"})
-    assert response.status_code == 200
-    assert response.json()["response"] == f"{MOCK_RESPONSE_PREFIX}ciao"
+def test_test_llm_with_unknown_model_returns_validation_error(client):
+    response = client.post("/test-llm", json={"message": "ciao", "model": "nonexistent"})
+    assert response.status_code == 422
+    assert "model" in response.json()["detail"][0]["loc"]
