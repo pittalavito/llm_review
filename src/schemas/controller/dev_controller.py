@@ -2,6 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from schemas.agent.agent_output import AgentStructuredOutput
 from schemas.enums import AgentName, LlmModelName
 
 
@@ -42,7 +43,7 @@ class TestAgentRequest(BaseModel):
             raise ValueError("Message must not be empty.")
         return stripped
 
-    
+
 class GraphCompileRequest(BaseModel):
     methodology_reviewer_agent: AgentName
     methodology_reviewer_model: LlmModelName
@@ -63,6 +64,43 @@ class GraphRunRequest(BaseModel):
         return stripped
 
 
+class GraphRunFileRequest(BaseModel):
+    paper_path: str = Field(min_length=1, max_length=500)
+    top_k: int | None = Field(default=None, ge=1, le=20)
+    force_reindex: bool = False
+
+    @field_validator("paper_path")
+    @classmethod
+    def validate_paper_path(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Paper path must not be empty.")
+        return stripped
+
+
+class RetrievalMetadata(BaseModel):
+    paper_path: str
+    index_status: str
+    chunk_count_total: int
+    chunk_count_retrieved: int
+    top_k: int
+
+
 class GraphRunResponse(BaseModel):
-    reviews: list[str]
+    reviews: list[AgentStructuredOutput]
     raw_result: dict[str, Any]
+    retrieval: RetrievalMetadata | None = None
+
+
+class OpenReviewSearchRequest(BaseModel):
+    keyword: str = Field(min_length=1, max_length=200)
+    venue_id: str = Field(min_length=1, max_length=300)
+    limit: int = Field(default=10, ge=1, le=100)
+
+    @field_validator("keyword", "venue_id")
+    @classmethod
+    def validate_non_empty(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Value must not be empty.")
+        return stripped

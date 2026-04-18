@@ -1,12 +1,11 @@
 import logging
 
 from contextlib import asynccontextmanager
-from pathlib import Path
 from container import Container
-from controller import router as controller
+from controllers import ReviewController, dev_router
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from settings import Settings
+from settings import Settings, UI_DIR
 
 # 1. Configure logging and load settings
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s]: %(message)s")
@@ -23,10 +22,10 @@ async def lifespan(app: FastAPI):
 
 # 3. Create FastAPI app and include routes
 app = FastAPI(lifespan=lifespan, title=settings.app_name, version=settings.app_version)
-app.include_router(controller)
+app.include_router(dev_router)
+app.include_router(ReviewController().router)
 
 # 4. Mount static files for the UI
-_ui_dir = Path(__file__).parents[1] / "ui"
-app.mount("/ui", StaticFiles(directory=_ui_dir, html=True), name="ui")
+app.mount("/ui", StaticFiles(directory=UI_DIR, html=True), name="ui")
 
 

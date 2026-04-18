@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 _TOOL_CALLING_MODELS = {
     LlmModelName.OLLAMA_LLAMA32,
+    LlmModelName.OLLAMA_GROQ_TOOL_USE,
+    LlmModelName.OLLAMA_GEMMA_4
 }
 
 

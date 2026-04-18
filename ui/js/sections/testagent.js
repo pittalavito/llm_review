@@ -4,6 +4,59 @@
 
 import { listAgents, listModels, testAgent } from '../api.js';
 
+function asText(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value.trim();
+  return String(value).trim();
+}
+
+function formatList(title, items) {
+  if (!Array.isArray(items) || items.length === 0) return '';
+  const lines = [title];
+  for (const item of items) {
+    const content = asText(item);
+    if (content) lines.push(`- ${content}`);
+  }
+  return lines.length > 1 ? lines.join('\n') : '';
+}
+
+function formatAgentResponse(data) {
+  if (!data || typeof data !== 'object') {
+    return typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  }
+
+  const agent = asText(data.agent) || 'unknown_agent';
+  const payload = data.payload;
+  if (!payload || typeof payload !== 'object') {
+    return `[${agent}]\n${JSON.stringify(payload, null, 2)}`;
+  }
+
+  const sections = [`[${agent}]`];
+  const summary = asText(payload.summary) || asText(payload.analysis);
+  if (summary) {
+    sections.push(`Summary\n${summary}`);
+  }
+
+  const strengths = formatList('Strengths', payload.strengths);
+  if (strengths) sections.push(strengths);
+
+  const weaknesses = formatList('Weaknesses', payload.weaknesses);
+  if (weaknesses) sections.push(weaknesses);
+
+  const recommendations = formatList('Recommendations', payload.recommendations);
+  if (recommendations) sections.push(recommendations);
+
+  const confidence = asText(payload.confidence);
+  if (confidence) {
+    sections.push(`Confidence\n${confidence}`);
+  }
+
+  if (sections.length === 1) {
+    sections.push(JSON.stringify(payload, null, 2));
+  }
+  return sections.join('\n\n');
+}
+
 /** @returns {HTMLElement} */
 export function render() {
   const el = document.createElement('section');
@@ -127,7 +180,9 @@ export function mount(container) {
 
   function showResponse(title, data, isError = false) {
     responseTitle.textContent = title;
-    responseBody.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    responseBody.textContent = isError
+      ? (typeof data === 'string' ? data : JSON.stringify(data, null, 2))
+      : formatAgentResponse(data);
     responseBadge.textContent = isError ? 'Error' : 'Completed';
     responseBadge.className = isError ? 'badge badge--error' : 'badge badge--success';
     responseCard.classList.toggle('test-agent-response--error', isError);

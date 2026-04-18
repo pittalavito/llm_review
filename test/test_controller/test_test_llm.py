@@ -18,14 +18,14 @@ def client():
 
 
 def test_health_endpoint(client):
-    response = client.get("/health")
+    response = client.get("/dev/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
 
 
 def test_models_endpoint(client):
-    response = client.get("/models")
+    response = client.get("/dev/models")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
@@ -33,7 +33,7 @@ def test_models_endpoint(client):
 
 
 def test_test_agent_list_endpoint(client):
-    response = client.get("/agents")
+    response = client.get("/dev/agents")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
@@ -42,7 +42,7 @@ def test_test_agent_list_endpoint(client):
 
 def test_test_agent_with_mock_model_and_multiline_message(client):
     response = client.post(
-        "/agents",
+        "/dev/agents",
         json={
             "name": "test_tool_agent",
             "model": "mock",
@@ -52,23 +52,24 @@ def test_test_agent_with_mock_model_and_multiline_message(client):
     )
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, str)
-    assert data
+    assert data["agent"] == "test_tool_agent"
+    assert isinstance(data["payload"], dict)
+    assert "analysis" in data["payload"]
 
 
 def test_test_llm_endpoint(client):
-    response = client.post("/test-llm", json={"message": "ciao"})
+    response = client.post("/dev/test-llm", json={"message": "ciao"})
     assert response.status_code == 422
     assert "model" in response.json()["detail"][0]["loc"]
 
 
 def test_test_llm_with_explicit_model(client):
-    response = client.post("/test-llm", json={"message": "ciao", "model": "mock"})
+    response = client.post("/dev/test-llm", json={"message": "ciao", "model": "mock"})
     assert response.status_code == 200
     assert response.json()["response"] == f"{MOCK_RESPONSE_PREFIX}ciao"
 
 
 def test_test_llm_with_unknown_model_returns_validation_error(client):
-    response = client.post("/test-llm", json={"message": "ciao", "model": "nonexistent"})
+    response = client.post("/dev/test-llm", json={"message": "ciao", "model": "nonexistent"})
     assert response.status_code == 422
     assert "model" in response.json()["detail"][0]["loc"]

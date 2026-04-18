@@ -2,7 +2,7 @@
  * sections/graph.js — Graph configuration and execution section.
  */
 
-import { getGraphConfig, listAgents, listModels, putGraphConfig, runGraph } from '../api.js';
+import { getGraphConfig, listAgents, listModels, putGraphConfig, runGraph, runGraphFromFile } from '../api.js';
 
 function clampTemperature(value) {
   const parsed = Number.parseFloat(value);
@@ -20,6 +20,97 @@ function parseOptionalInteger(value) {
 
   const parsed = Number.parseInt(trimmed, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function resolveTopK(value) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return 6;
+  if (parsed < 1) return 1;
+  if (parsed > 20) return 20;
+  return parsed;
+}
+
+function asText(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value.trim();
+  return String(value).trim();
+}
+
+function formatList(title, items) {
+  if (!Array.isArray(items) || items.length === 0) return '';
+  const lines = [title];
+  for (const item of items) {
+    const content = asText(item);
+    if (content) lines.push(`- ${content}`);
+  }
+  return lines.length > 1 ? `${lines.join('\n')}\n` : '';
+}
+
+function formatAgentPayload(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return JSON.stringify(payload, null, 2);
+  }
+
+  const sections = [];
+  const summary = asText(payload.summary);
+  if (summary) {
+    sections.push(`Summary\n${summary}`);
+  }
+
+  const strengths = formatList('Strengths', payload.strengths);
+  if (strengths) sections.push(strengths.trimEnd());
+
+  const weaknesses = formatList('Weaknesses', payload.weaknesses);
+  if (weaknesses) sections.push(weaknesses.trimEnd());
+
+  const missingInfo = formatList('Missing Information', payload.missing_information);
+  if (missingInfo) sections.push(missingInfo.trimEnd());
+
+  const recommendations = formatList('Recommendations', payload.recommendations);
+  if (recommendations) sections.push(recommendations.trimEnd());
+
+  const confidence = asText(payload.confidence);
+  if (confidence) {
+    sections.push(`Confidence\n${confidence}`);
+  }
+
+  if (sections.length === 0) {
+    return JSON.stringify(payload, null, 2);
+  }
+  return sections.join('\n\n');
+}
+
+function formatStructuredReview(review, index) {
+  if (!review || typeof review !== 'object') {
+    return `Review ${index + 1}\n${JSON.stringify(review, null, 2)}`;
+  }
+  const agent = asText(review.agent) || `agent_${index + 1}`;
+  const payloadText = formatAgentPayload(review.payload);
+  return `[${agent}]\n${payloadText}`;
+}
+
+function formatGraphResult(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+  }
+
+  if (!Array.isArray(payload.reviews)) {
+    return JSON.stringify(payload, null, 2);
+  }
+
+  const blocks = payload.reviews.map((review, index) => formatStructuredReview(review, index));
+  const retrieval = payload.retrieval;
+  if (retrieval && typeof retrieval === 'object') {
+    const meta = [
+      'Retrieval',
+      `- index_status: ${asText(retrieval.index_status) || 'n/a'}`,
+      `- chunks_loaded: ${asText(retrieval.chunks_loaded) || 'n/a'}`,
+      `- chunks_used: ${asText(retrieval.chunks_used) || 'n/a'}`,
+    ].join('\n');
+    blocks.push(meta);
+  }
+
+  return blocks.join('\n\n' + '-'.repeat(48) + '\n\n');
 }
 
 export function render() {
@@ -99,6 +190,14 @@ export function render() {
         </div>
         <div class="card__body graph-panel__body">
           <form class="graph-form" id="graph-run-form" novalidate>
+            <label class="graph-field graph-field--full">
+              <span class="graph-field__label">Run Mode</span>
+              <select class="graph-field__control" id="graph-run-mode">
+                <option value="text">Text</option>
+                <option value="file">File (resource/papers)</option>
+              </select>
+            </label>
+
             <div class="graph-field graph-field--full">
               <div class="graph-field__header">
                 <span class="graph-field__label">Paper Text</span>
@@ -111,6 +210,32 @@ export function render() {
                 maxlength="20000"
                 placeholder="Paste the paper abstract, review draft, or methodology section you want to evaluate..."
               ></textarea>
+            </div>
+
+            <div class="graph-grid" id="graph-file-fields" hidden>
+              <label class="graph-field graph-field--full">
+                <span class="graph-field__label">Paper Path</span>
+                <input
+                  class="graph-field__control"
+                  id="graph-paper-path-input"
+                  type="text"
+                  maxlength="500"
+                  placeholder="e.g. my-paper/paper.pdf (relative to resource/papers)"
+                />
+              </label>
+
+              <label class="graph-field">
+                <span class="graph-field__label">Top K Chunks</span>
+                <input class="graph-field__control" id="graph-top-k-input" type="number" min="1" max="20" value="6" />
+              </label>
+
+              <label class="graph-field">
+                <span class="graph-field__label">Force Reindex</span>
+                <select class="graph-field__control" id="graph-force-reindex-input">
+                  <option value="false" selected>No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </label>
             </div>
 
             <div class="graph-actions">
@@ -146,8 +271,13 @@ export function mount(container) {
   const statusBadge = container.querySelector('#graph-status-badge');
   const statusTitle = container.querySelector('#graph-status-title');
   const statusBody = container.querySelector('#graph-status-body');
+  const runModeSelect = container.querySelector('#graph-run-mode');
   const paperInput = container.querySelector('#graph-paper-input');
   const paperCounter = container.querySelector('#graph-paper-counter');
+  const fileFields = container.querySelector('#graph-file-fields');
+  const paperPathInput = container.querySelector('#graph-paper-path-input');
+  const topKInput = container.querySelector('#graph-top-k-input');
+  const forceReindexInput = container.querySelector('#graph-force-reindex-input');
   const runButton = container.querySelector('#graph-run-btn');
   const resultCard = container.querySelector('#graph-result-card');
   const resultBadge = container.querySelector('#graph-result-badge');
@@ -163,7 +293,11 @@ export function mount(container) {
     iterationsInput.disabled = loading;
     maxTokensInput.disabled = loading;
     compileButton.disabled = loading;
+    runModeSelect.disabled = loading;
     paperInput.disabled = loading || !graphCompiled;
+    paperPathInput.disabled = loading || !graphCompiled;
+    topKInput.disabled = loading || !graphCompiled;
+    forceReindexInput.disabled = loading || !graphCompiled;
     runButton.disabled = loading || !graphCompiled;
   }
 
@@ -175,21 +309,40 @@ export function mount(container) {
     iterationsInput.disabled = loading;
     maxTokensInput.disabled = loading;
     compileButton.textContent = loading ? 'Compiling…' : 'Compile Graph';
+    runModeSelect.disabled = loading;
     paperInput.disabled = loading || !graphCompiled;
+    paperPathInput.disabled = loading || !graphCompiled;
+    topKInput.disabled = loading || !graphCompiled;
+    forceReindexInput.disabled = loading || !graphCompiled;
     runButton.disabled = loading || !graphCompiled;
   }
 
   function setRunLoading(loading) {
     runButton.disabled = loading || !graphCompiled;
+    runModeSelect.disabled = loading || !graphCompiled;
     paperInput.disabled = loading || !graphCompiled;
+    paperPathInput.disabled = loading || !graphCompiled;
+    topKInput.disabled = loading || !graphCompiled;
+    forceReindexInput.disabled = loading || !graphCompiled;
     runButton.textContent = loading ? 'Running…' : 'Run Graph';
   }
 
   function setGraphCompiled(compiled) {
     graphCompiled = compiled;
     paperInput.disabled = !compiled;
+    runModeSelect.disabled = !compiled;
+    paperPathInput.disabled = !compiled;
+    topKInput.disabled = !compiled;
+    forceReindexInput.disabled = !compiled;
     runButton.disabled = !compiled;
     runButton.title = compiled ? '' : 'Compile the graph configuration before running it.';
+  }
+
+  function renderRunMode() {
+    const mode = runModeSelect.value;
+    const isFileMode = mode === 'file';
+    fileFields.hidden = !isFileMode;
+    paperInput.closest('.graph-field').hidden = isFileMode;
   }
 
   function showStatus(title, payload, isError = false) {
@@ -202,7 +355,9 @@ export function mount(container) {
 
   function showResult(title, payload, isError = false) {
     resultTitle.textContent = title;
-    resultBody.textContent = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+    resultBody.textContent = isError
+      ? (typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2))
+      : formatGraphResult(payload);
     resultBadge.textContent = isError ? 'Error' : 'Completed';
     resultBadge.className = isError ? 'badge badge--error' : 'badge badge--success';
     resultCard.hidden = false;
@@ -247,8 +402,10 @@ export function mount(container) {
 
   temperatureInput.addEventListener('input', renderTemperatureValue);
   paperInput.addEventListener('input', renderPaperCounter);
+  runModeSelect.addEventListener('change', renderRunMode);
   renderTemperatureValue();
   renderPaperCounter();
+  renderRunMode();
   setGraphCompiled(false);
   setBootstrapLoading(true);
   showStatus('Loading Graph Setup', 'Loading agents, models, and the current graph configuration...');
@@ -319,16 +476,31 @@ export function mount(container) {
   runForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const paper = paperInput.value.trim();
-    if (!paper) {
-      showResult('Validation Error', 'Add some paper text before running the graph.', true);
-      return;
-    }
+    const mode = runModeSelect.value;
 
     setRunLoading(true);
     resultCard.hidden = true;
     try {
-      const result = await runGraph({ paper });
+      let result;
+      if (mode === 'file') {
+        const paperPath = paperPathInput.value.trim();
+        if (!paperPath) {
+          showResult('Validation Error', 'Add a file path relative to resource/papers.', true);
+          return;
+        }
+        result = await runGraphFromFile({
+          paper_path: paperPath,
+          top_k: resolveTopK(topKInput.value),
+          force_reindex: forceReindexInput.value === 'true',
+        });
+      } else {
+        const paper = paperInput.value.trim();
+        if (!paper) {
+          showResult('Validation Error', 'Add some paper text before running the graph.', true);
+          return;
+        }
+        result = await runGraph({ paper });
+      }
       showResult(`Graph Result (${result.reviews.length} review${result.reviews.length === 1 ? '' : 's'})`, result);
     } catch (err) {
       showResult('Graph Run Failed', err.message, true);

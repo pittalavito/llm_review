@@ -33,3 +33,6 @@ Thumbs.db
 
 # uv
 .uv/
+
+# retrieval cache
+resource/rag-index/*.json

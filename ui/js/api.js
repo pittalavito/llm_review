@@ -1,4 +1,4 @@
-const BASE_URL = '';
+const BASE_URL = '/dev';
 
 async function readJsonOrText(response) {
   const contentType = response.headers.get('content-type') || '';
@@ -21,7 +21,7 @@ async function throwForResponse(response) {
 }
 
 /**
- * GET /health
+ * GET /dev/health
  * @returns {Promise<{ status: string, version: string }>}
  */
 export async function checkHealth() {
@@ -31,7 +31,7 @@ export async function checkHealth() {
 }
 
 /**
- * GET /models
+ * GET /dev/models
  * @returns {Promise<string[]>}
  */
 export async function listModels() {
@@ -40,7 +40,7 @@ export async function listModels() {
   return res.json();
 }
 /**
- * POST /test-llm
+ * POST /dev/test-llm
  * @param {string} message
  * @param {string} model
  * @param {number} [temperature]
@@ -58,7 +58,7 @@ export async function testLlm(message, model, temperature = 1) {
 }
 
 /**
- * GET /agents
+ * GET /dev/agents
  * @returns {Promise<string[]>}
  */
 export async function listAgents() {
@@ -68,9 +68,9 @@ export async function listAgents() {
 }
 
 /**
- * POST /agents
+ * POST /dev/agents
  * @param {{ name: string, model: string, temperature: number, message: string }} payload
- * @returns {Promise<string>}
+ * @returns {Promise<{ agent: string, payload: Record<string, unknown> }>}
  */
 export async function testAgent(payload) {
   const res = await fetch(`${BASE_URL}/agents`, {
@@ -83,7 +83,7 @@ export async function testAgent(payload) {
 }
 
 /**
- * GET /graph-config
+ * GET /dev/graph-config
  * @returns {Promise<null | {
  *   methodology_reviewer_agent: string,
  *   methodology_reviewer_model: string,
@@ -99,7 +99,7 @@ export async function getGraphConfig() {
 }
 
 /**
- * PUT /graph-config
+ * PUT /dev/graph-config
  * @param {{
  *   methodology_reviewer_agent: string,
  *   methodology_reviewer_model: string,
@@ -119,9 +119,12 @@ export async function putGraphConfig(payload) {
 }
 
 /**
- * POST /graph-run
+ * POST /dev/graph-run
  * @param {{ paper: string }} payload
- * @returns {Promise<{ reviews: string[], raw_result: Record<string, unknown> }>}
+ * @returns {Promise<{
+ *   reviews: Array<{ agent: string, payload: Record<string, unknown> }>,
+ *   raw_result: Record<string, unknown>
+ * }>}
  */
 export async function runGraph(payload) {
   const res = await fetch(`${BASE_URL}/graph-run`, {
@@ -129,6 +132,74 @@ export async function runGraph(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * POST /dev/graph-run-file
+ * @param {{ paper_path: string, top_k?: number, force_reindex?: boolean }} payload
+ * @returns {Promise<{
+ *   reviews: Array<{ agent: string, payload: Record<string, unknown> }>,
+ *   raw_result: Record<string, unknown>,
+ *   retrieval: {
+ *     paper_path: string,
+ *     index_status: string,
+ *     chunk_count_total: number,
+ *     chunk_count_retrieved: number,
+ *     top_k: number,
+ *   } | null,
+ * }>}
+ */
+export async function runGraphFromFile(payload) {
+  const res = await fetch(`${BASE_URL}/graph-run-file`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * POST /dev/openreview/papers/search
+ * @param {{ keyword: string, venue_id: string, limit: number }} payload
+ * @returns {Promise<Array<{
+ *   id: string,
+ *   title: string,
+ *   abstract: string,
+ *   keywords: string[],
+ *   venue: string,
+ * }>>}
+ */
+export async function searchOpenReviewPapers(payload) {
+  const res = await fetch(`${BASE_URL}/openreview/papers/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * GET /dev/openreview/papers/{paperId}/summary
+ * @param {string} paperId
+ * @returns {Promise<{
+ *   id: string,
+ *   title: string,
+ *   abstract: string,
+ *   keywords: string[],
+ *   venue: string,
+ *   venueid: string,
+ *   pdf_path: string,
+ *   decision: string | null,
+ *   num_reviews: number,
+ *   review_summary: Array<{ rating: string, confidence: string, soundness: string }>,
+ * }>}
+ */
+export async function getOpenReviewPaperSummary(paperId) {
+  const res = await fetch(`${BASE_URL}/openreview/papers/${encodeURIComponent(paperId)}/summary`);
   await throwForResponse(res);
   return res.json();
 }

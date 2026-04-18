@@ -26,20 +26,15 @@ class TestToolAgent(BaseAgent):
         )
 
     def run(self, message: str) -> str:
-        normalized_message = message.strip()
-        if not normalized_message:
-            raise ValueError("Message must not be empty.")
-        if len(normalized_message) > MAX_MESSAGE_LENGTH:
-            raise ValueError(f"Message exceeds the maximum length of {MAX_MESSAGE_LENGTH} characters.")
-
+        normalized_message = self.normalize_message(message, max_length=MAX_MESSAGE_LENGTH)
         if not self.llm.supports_tool_calling():
-            logger.warning(
-                "Model for agent '%s' does not natively support tool-calling; using safe fallback.",
-                self.name,
-            )
-            return self._run_with_safe_fallback(normalized_message)
+            logger.warning("Model for agent '%s' does not natively support tool-calling; using safe fallback.", self.name)
+            analysis = self._run_with_safe_fallback(normalized_message)
+            return self.dump_structured_output({"analysis": analysis, "mode": "safe_fallback"})
 
         try:
+            logger.info("Running agent '%s' with tool-calling enabled.", self.name)
+            
             chat_model = self.llm.get_chat_model()
             app = create_agent(chat_model, [compute_text_stats])
             result = app.invoke(
@@ -50,13 +45,12 @@ class TestToolAgent(BaseAgent):
                     ]
                 }
             )
-            return self._extract_response(result)
+            analysis = self._extract_response(result)
+            return self.dump_structured_output({"analysis": analysis, "mode": "tool_calling"})
         except Exception:
-            logger.exception(
-                "Tool-calling failed for agent '%s'; falling back to direct tool execution.",
-                self.name,
-            )
-            return self._run_with_safe_fallback(normalized_message)
+            logger.exception("Tool-calling failed for agent '%s'; falling back to direct tool execution.", self.name)
+            analysis = self._run_with_safe_fallback(normalized_message)
+            return self.dump_structured_output({"analysis": analysis, "mode": "safe_fallback"})
 
     def _run_with_safe_fallback(self, message: str) -> str:
         tool_result = compute_text_stats.invoke({"text": message})
@@ -72,10 +66,7 @@ class TestToolAgent(BaseAgent):
             if response and not response.startswith(MOCK_RESPONSE_PREFIX):
                 return response
         except Exception:
-            logger.exception(
-                "Fallback summarization failed for agent '%s'; returning raw tool output.",
-                self.name,
-            )
+            logger.exception("Fallback summarization failed for agent '%s'; returning raw tool output.", self.name)
         return self._format_fallback_response(message, tool_result)
 
     @staticmethod

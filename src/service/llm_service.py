@@ -1,6 +1,6 @@
 
 from agent.base_agent import BaseAgent
-from agent.methodology_review import MethodologyReviewer
+from agent.methodology_review import MethodologyReviewerAgent
 from agent.test_tool_agent import TestToolAgent
 from clients.llm.base_llm_client import BaseLLMClient
 from clients.llm.mock_llm_client import MockLLMClient
@@ -37,7 +37,7 @@ class LlmService:
         """Initialize an agent based on the name, model, and temperature."""
         client = self.init_client(model, temperature)
         if name == AgentName.METHODOLOGY_REVIEWER:
-            return MethodologyReviewer(llm=client)
+            return MethodologyReviewerAgent(llm=client)
         if name == AgentName.TEST_TOOL_AGENT:
             return TestToolAgent(llm=client)
         raise ValueError(f"Unsupported agent name: {name}")

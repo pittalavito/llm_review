@@ -4,6 +4,8 @@ import asyncio
 from fastapi import Request
 from service.graph_service import GraphService
 from service.llm_service import LlmService
+from service.open_review_service import OpenReviewService
+from service.retrieval_service import RetrievalService
 from settings import Settings
 
 
@@ -13,6 +15,8 @@ class Container:
         self.settings = settings
         self.llm_service = LlmService(settings)
         self.graph_service = GraphService()
+        self.open_review_service = OpenReviewService()
+        self.retrieval_service = RetrievalService(settings)
 
 def inject_container(request: Request) -> Container:
     """Dependency to retrieve the DI container from the request state."""
@@ -32,3 +36,14 @@ def inject_graph_service(request: Request) -> GraphService:
     """Dependency to retrieve the Graph service from the container."""
     container = inject_container(request)
     return container.graph_service
+
+def inject_open_review_service(request: Request) -> OpenReviewService:
+    """Dependency to retrieve the OpenReview service from the container."""
+    container = inject_container(request)
+    return container.open_review_service
+
+
+def inject_retrieval_service(request: Request) -> RetrievalService:
+    """Dependency to retrieve the retrieval service from the container."""
+    container = inject_container(request)
+    return container.retrieval_service

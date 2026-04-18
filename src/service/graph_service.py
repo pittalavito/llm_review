@@ -1,13 +1,11 @@
 import asyncio
 from typing import Any
 
-from langgraph.graph import END, StateGraph
-
-from agent.base_agent import BaseAgent
-from schemas.controller import GraphCompileRequest
-from schemas.enums import GraphNodeName
-from schemas.graph import GraphState
+from factory.graph_factory import GraphFactory
+from schemas.controller.dev_controller import GraphCompileRequest
+from schemas.graph.graph import GraphState
 from service.llm_service import LlmService
+from service.retrieval_service import RetrievalService
 
 
 class GraphService:
@@ -25,7 +23,10 @@ class GraphService:
         """Compile the graph with the given configuration and store it in memory."""
         async with self.graph_lock:
             self.graph_config = config
-            self.graph = self._compile(llm_service)
+            self.graph = GraphFactory.build(
+                config=config,
+                llm_service=llm_service,
+            )
                         
     def invoke(self, input_data: dict) -> dict:
         """Invoke the graph synchronously with the given input data."""
@@ -41,17 +42,26 @@ class GraphService:
             
         initial_state = self._build_initial_state(input_data["paper"])
         return await self.graph.ainvoke(initial_state)
-    
-    def _make_node(self, agent: BaseAgent):
-        """Create a graph node function that runs the given agent."""
-        def node(state: GraphState) -> dict:
-            review = agent.run(state["paper"])
-            return {
-                "reviews": [review],
-                "current_round": state["current_round"] + 1,
-            }
-        return node
 
+    def invoke_from_file(
+        self,
+        retrieval_service: RetrievalService,
+        paper_path: str,
+        top_k: int | None = None,
+        force_reindex: bool = False,
+    ) -> tuple[dict, dict]:
+        """Retrieve context from a file and invoke the graph."""
+        retrieval_result = retrieval_service.retrieve_for_methodology_review(
+            paper_path=paper_path,
+            top_k=top_k,
+            force_reindex=force_reindex,
+        )
+        context = retrieval_result["context"]
+        metadata = retrieval_result["metadata"]
+
+        result = self.invoke({"paper": context})
+        return result, metadata
+    
     def _build_initial_state(self, paper: str) -> GraphState:
         if self.graph_config is None:
             raise ValueError("Graph is not compiled yet.")
@@ -63,20 +73,3 @@ class GraphService:
             "current_round": 0,
             "max_rounds": self.graph_config.max_iterations,
         }
-    
-    def _compile(self, llm_service: LlmService) -> StateGraph:
-        """Compile the graph based on the current configuration and LLM service."""
-        config: GraphCompileRequest = self.graph_config
-        graph = StateGraph(GraphState)
-        
-        methodology_reviewer_node = GraphNodeName.METHODOLOGY_REVIEWER
-        methodology_reviewer_agent = llm_service.init_agent(
-            config.methodology_reviewer_agent,
-            config.methodology_reviewer_model,
-            config.methodology_reviewer_temperature,
-        )
-        
-        graph.add_node(methodology_reviewer_node, self._make_node(methodology_reviewer_agent))
-        graph.set_entry_point(methodology_reviewer_node)
-        graph.add_edge(methodology_reviewer_node, END)
-        return graph.compile()
