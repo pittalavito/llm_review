@@ -6,7 +6,7 @@ from retrieval.index_repository import IndexRepository
 from retrieval.context_builder import ContextBuilder
 from retrieval.index_builder import IndexBuilder
 from retrieval.ranker import BM25Ranker
-from models.retrieval import FileSignature, Index, IndexConfig, RetrievalMetadata, RetrievalRequest, RetrievalResponse
+from models.retrieval import FileSignature, Index, IndexConfig, IndexInfo, RetrievalMetadata, RetrievalRequest, RetrievalResponse
 from config import PAPERS_DIR, RAG_INDEX_DIR, Config
 
 RAG_QUERY = (
@@ -31,9 +31,62 @@ class RetrievalService:
         self._context_builder = ContextBuilder(max_context_chars=config.rag_max_context_chars)
 
 
+    def list_papers(self) -> list[str]:
+        """Return relative paths of all available paper files."""
+        papers_dir = self._file_adapter.papers_dir
+        return sorted(
+            f.relative_to(papers_dir).as_posix()
+            for f in papers_dir.rglob("*")
+            if f.is_file() and f.suffix.lower() in {'.pdf', '.txt'}
+        )
+        
+
+    def get_indexed_paper(self, paper_path: str) -> IndexInfo:
+        """Return index metadata for a specific paper. Raises ValueError if not indexed."""
+        _, relative_path = self._file_adapter.resolve_paper_path(paper_path)
+        doc_id = self._index_repository.compute_doc_id(relative_path)
+        index_payload = self._index_repository.load(doc_id)
+        if index_payload is None:
+            raise ValueError(f"No index found for paper: {relative_path}")
+        return IndexInfo(
+            doc_id=index_payload.doc_id,
+            paper_path=index_payload.paper_path,
+            file_signature=index_payload.file_signature,
+            settings=index_payload.settings,
+            chunk_count=len(index_payload.chunks),
+        )
+
+
+    def list_indexed_papers(self) -> list[str]:
+        """Return paper_path for every paper that has a persisted BM25 index."""
+        return self._index_repository.list_indexed()
+
+
+    def index_paper(self, paper_path: str, force_reindex: bool = False) -> RetrievalMetadata:
+        """Build or reuse the BM25 index for a paper. Returns indexing metadata."""
+        resolved_path, relative_path = self._file_adapter.resolve_paper_path(paper_path)
+        doc_id = self._index_repository.compute_doc_id(relative_path)
+        file_signature = self._file_adapter.build_file_signature(resolved_path)
+
+        index_payload = self._index_repository.load(doc_id)
+        if force_reindex or not self._is_index_valid(index_payload, relative_path, file_signature):
+            index_payload = self._build_index(resolved_path, relative_path, doc_id, file_signature)
+            index_status = "rebuilt"
+        else:
+            index_status = "reused"
+
+        return RetrievalMetadata(
+            paper_path=relative_path,
+            index_status=index_status,
+            chunk_count_total=len(index_payload.chunks),
+            chunk_count_retrieved=0,
+            top_k=self.config.rag_top_k_default,
+        )
+
+
     def retrieve_context(self, paper_path: str, top_k: int | None = None, force_reindex: bool = False, query: str | None = None) -> dict[str, Any]:
         """Retrieve context for a given paper path, with optional RAG parameters. Returns context and metadata."""
-        request = RetrievalRequest(paper_path, top_k, force_reindex, query)
+        request = RetrievalRequest(paper_path=paper_path, top_k=top_k, force_reindex=force_reindex, query=query)
         result = self.retrieve(request)
         return {"context": result.context, "metadata": result.metadata.model_dump(),}
 

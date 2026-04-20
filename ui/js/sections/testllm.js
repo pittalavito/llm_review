@@ -151,7 +151,7 @@ export function mount(container) {
     try {
       const data = await testLlm(message, selectedModel, selectedTemperature);
       loadingEl.remove();
-      appendBubble(data.response, 'bot');
+      appendBubble(typeof data === 'string' ? data : JSON.stringify(data), 'bot');
     } catch (err) {
       loadingEl.remove();
       const errBubble = appendBubble(`Error: ${err.message}`, 'bot');

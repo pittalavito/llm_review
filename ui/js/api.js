@@ -108,47 +108,22 @@ export async function previewAgentPrompt(payload) {
 }
 
 /**
- * GET /dev/graph-config
- * @returns {Promise<null | {
- *   model: string,
- *   temperature: number,
- *   max_iterations: number,
- * }>}
+ * GET /dev/papers
+ * @returns {Promise<string[]>}
  */
-export async function getGraphConfig() {
-  const res = await fetch(`${BASE_URL}/graph-config`);
+export async function listPapers() {
+  const res = await fetch(`${BASE_URL}/papers`);
   await throwForResponse(res);
   return res.json();
 }
 
 /**
- * PUT /dev/graph-config
- * @param {{
- *   model: string,
- *   temperature: number,
- *   max_iterations: number,
- * }} payload
+ * POST /dev/papers/index
+ * @param {{ paper_path: string, force_reindex?: boolean }} payload
+ * @returns {Promise<Record<string, unknown>>}
  */
-export async function putGraphConfig(payload) {
-  const res = await fetch(`${BASE_URL}/graph-config`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  await throwForResponse(res);
-  return res.json();
-}
-
-/**
- * POST /dev/graph-run
- * @param {{ paper: string }} payload
- * @returns {Promise<{
- *   reviews: Array<{ agent: string, payload: Record<string, unknown> }>,
- *   raw_result: Record<string, unknown>
- * }>}
- */
-export async function runGraph(payload) {
-  const res = await fetch(`${BASE_URL}/graph-run`, {
+export async function indexPaper(payload) {
+  const res = await fetch(`${BASE_URL}/papers/index`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -158,69 +133,48 @@ export async function runGraph(payload) {
 }
 
 /**
- * POST /dev/graph-run-file
- * @param {{ paper_path: string, top_k?: number, force_reindex?: boolean }} payload
- * @returns {Promise<{
- *   reviews: Array<{ agent: string, payload: Record<string, unknown> }>,
- *   raw_result: Record<string, unknown>,
- *   retrieval: {
- *     paper_path: string,
- *     index_status: string,
- *     chunk_count_total: number,
- *     chunk_count_retrieved: number,
- *     top_k: number,
- *   } | null,
- * }>}
+ * GET /dev/papers/indexed
+ * @returns {Promise<string[]>}
  */
-export async function runGraphFromFile(payload) {
-  const res = await fetch(`${BASE_URL}/graph-run-file`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+export async function listIndexedPapers() {
+  const res = await fetch(`${BASE_URL}/papers/indexed`);
   await throwForResponse(res);
   return res.json();
 }
 
 /**
- * POST /dev/openreview/papers/search
- * @param {{ keyword: string, venue_id: string, limit: number }} payload
- * @returns {Promise<Array<{
- *   id: string,
- *   title: string,
- *   abstract: string,
- *   keywords: string[],
- *   venue: string,
- * }>>}
+ * GET /dev/papers/indexed/detail?paper_path=…
+ * @param {string} paperPath
+ * @returns {Promise<Record<string, unknown>>}
  */
-export async function searchOpenReviewPapers(payload) {
-  const res = await fetch(`${BASE_URL}/openreview/papers/search`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+export async function getIndexedPaperDetail(paperPath) {
+  const params = new URLSearchParams({ paper_path: paperPath });
+  const res = await fetch(`${BASE_URL}/papers/indexed/detail?${params}`);
   await throwForResponse(res);
   return res.json();
 }
 
 /**
- * GET /dev/openreview/papers/{paperId}/summary
- * @param {string} paperId
- * @returns {Promise<{
- *   id: string,
- *   title: string,
- *   abstract: string,
- *   keywords: string[],
- *   venue: string,
- *   venueid: string,
- *   pdf_path: string,
- *   decision: string | null,
- *   num_reviews: number,
- *   review_summary: Array<{ rating: string, confidence: string, soundness: string }>,
- * }>}
+ * POST /dev/agents/retrieval
+ * @param {{ name: string, model: string, temperature: number, message: string, paper_path: string, top_k?: number }} payload
+ * @returns {Promise<{ agent: string, payload: Record<string, unknown> }>}
  */
-export async function getOpenReviewPaperSummary(paperId) {
-  const res = await fetch(`${BASE_URL}/openreview/papers/${encodeURIComponent(paperId)}/summary`);
-  await throwForResponse(res);
+export async function testAgentWithRetrieval(payload) {
+  const res = await fetch(`${BASE_URL}/agents/retrieval`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await readJsonOrText(res);
+    const detail = typeof body === 'string' ? body : body?.detail;
+    const message =
+      typeof detail === 'string'
+        ? detail
+        : detail?.error || JSON.stringify(detail) || `HTTP ${res.status} ${res.statusText}`;
+    const err = new Error(message);
+    err.llmRawOutput = typeof detail === 'object' && detail !== null ? (detail.llm_raw_output ?? null) : null;
+    throw err;
+  }
   return res.json();
 }

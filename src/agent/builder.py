@@ -12,12 +12,7 @@ class PromptBuilder:
     """
 
     @staticmethod
-    def build_prompt(
-        system_prompt: str,
-        schema: type[BaseModel] | None,
-        message: str,
-        message_label: str = "Message",
-    ) -> str:
+    def build_prompt(system_prompt: str, schema: type[BaseModel] | None, message: str, message_label: str = "Message") -> str:
         """Assemble the full prompt: system prompt + schema instructions + user message."""
         parts: list[str] = []
 

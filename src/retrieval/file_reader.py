@@ -8,6 +8,7 @@ ALLOWED_EXTENSIONS = {".txt", ".pdf"}
 
 
 class PaperFileReader:
+    
     def __init__(self, papers_dir: Path):
         self.papers_dir = papers_dir.resolve()
 
@@ -25,7 +26,6 @@ class PaperFileReader:
         relative_path = candidate.relative_to(self.papers_dir).as_posix()
         return candidate, relative_path
 
-    @staticmethod
     def extract_text(self, source_path: Path) -> str:
         if source_path.suffix.lower() == ".txt":
             text = source_path.read_text(encoding="utf-8")

@@ -47,7 +47,7 @@ class BaseAgent(ABC):
         raw_output = self.llm_client.invoke(full_prompt)
         payload = self._adapt_llm_response(full_prompt, raw_output)
         return LlmResponseAdapter.to_structured_output(self.name, payload)
-
+    
 
     def _normalize_message(self, message: str, max_length: int | None = None) -> str:
         normalized_message = message.strip()
@@ -65,6 +65,7 @@ class BaseAgent(ABC):
             message=message,
             message_label=self.MESSAGE_LABEL,
         )
+
 
     def _adapt_llm_response(self, prompt: str, raw_output: str) -> dict:
         """Adapt raw LLM output into a validated dict payload, with optional self-repair attempts."""

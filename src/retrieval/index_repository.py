@@ -36,3 +36,12 @@ class IndexRepository:
         path = self.index_file_path(payload.doc_id)
         with path.open("w", encoding="utf-8") as handle:
             json.dump(payload.model_dump(), handle, indent=2, ensure_ascii=False)
+
+    def list_indexed(self) -> list[str]:
+        """Return paper_path for every index file persisted on disk."""
+        result = []
+        for file in sorted(self.index_dir.glob("*.json")):
+            with file.open("r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            result.append(data["paper_path"])
+        return result

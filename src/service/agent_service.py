@@ -18,6 +18,15 @@ from agent.impl.soundness_reviewer import SoundnessReviewerAgent
 logger = logging.getLogger(__name__)
 
 
+_REGISTRY: dict[AgentName, type[BaseAgent]] = {
+    AgentName.SOUNDNESS_REVIEWER: SoundnessReviewerAgent,
+    AgentName.PRESENTATION_REVIEWER: PresentationReviewerAgent,
+    AgentName.CONTRIBUTION_REVIEWER: ContributionReviewerAgent,
+    AgentName.META_REVIEWER: MetaReviewerAgent,
+    AgentName.REFINEMENT_AGENT: RefinementAgent,
+}
+
+
 class AgentService:
 
     def __init__(self, config: Config):
@@ -25,7 +34,7 @@ class AgentService:
         self._cache_lock = RLock()
         self._client_cache: dict[tuple[LlmModelName, float], object] = {}
         self._agent_cache: dict[tuple[AgentName, LlmModelName, float], BaseAgent] = {}
-            
+        
  
     def init_client(self, model: LlmModelName, temperature: float):
         normalized_temp = self._normalize_temperature(temperature)
@@ -66,7 +75,8 @@ class AgentService:
                 return cached
             
             client = self.init_client(model, normalized_temp)
-            agent = self._create_agent(name, client)
+            agent_class = self.get_agent_class(name)
+            agent = agent_class(llm=client)
             self._agent_cache[key] = agent
             return agent
 
@@ -80,6 +90,13 @@ class AgentService:
         agent = self.init_agent(name, model, temperature)
         return agent.run(message)
 
+
+    @staticmethod
+    def get_agent_class(name: AgentName) -> type[BaseAgent]:
+        agent_class = _REGISTRY.get(name)
+        if agent_class is None:
+            raise ValueError(f"Unsupported agent name: {name}")
+        return agent_class
     
     @staticmethod
     def _normalize_temperature(temperature: float) -> float:
@@ -101,19 +118,4 @@ class AgentService:
         else:
             raise ValueError(f"Unsupported LLM model: {model}")
     
-    
-    @staticmethod
-    def _create_agent(name: AgentName, client: BaseLLMClient) -> BaseAgent:
-        _REGISTRY: dict[AgentName, type[BaseAgent]] = {
-            AgentName.SOUNDNESS_REVIEWER: SoundnessReviewerAgent,
-            AgentName.PRESENTATION_REVIEWER: PresentationReviewerAgent,
-            AgentName.CONTRIBUTION_REVIEWER: ContributionReviewerAgent,
-            AgentName.META_REVIEWER: MetaReviewerAgent,
-            AgentName.REFINEMENT_AGENT: RefinementAgent,
-        }
-        
-        agent_class = _REGISTRY.get(name)
-        if agent_class is None:
-            raise ValueError(f"Unsupported agent name: {name}")
-        return agent_class(llm=client)
     

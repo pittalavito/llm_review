@@ -2,7 +2,7 @@ import logging
 
 from contextlib import asynccontextmanager
 from container import Container
-from controller import router as dev_router
+from dev_controller import router as dev_router
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from config import Config, UI_DIR

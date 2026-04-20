@@ -1,4 +1,6 @@
 from fastapi import Request
+from agent.base import BaseAgent
+from agent.builder import PromptBuilder
 from config import Config
 from graph.config import GraphAgentConfig
 from service.graph_service import GraphService
@@ -17,36 +19,70 @@ class Container:
     
     
     def health_check(self) -> dict:
-        version = self._config.app_version
+        """Simple health check endpoint returning app version."""
+        version: str = self._config.app_version
         return {"status": "ok", "version": version}
     
     
     def test_llm(self, model, temperature, message) -> str:
+        """Test LLM response for given model, temperature and message."""
         agent_service: AgentService = self._agent_service
         return agent_service.invoke_client(model, temperature, message)
     
+    # il FE non lo mostra bene 
+    def build_agent_prompt(self, name, message) -> str:
+        """Build the full prompt for a given agent name and user message."""
+        agent_class: BaseAgent = AgentService.get_agent_class(name)
+        
+        system_prompt = agent_class.SYSTEM_PROMPT
+        schema = agent_class.RESPONSE_SCHEMA
+        message_label = agent_class.MESSAGE_LABEL
+        return PromptBuilder.build_prompt(system_prompt, schema, message, message_label)    
+    
     
     def test_agent(self, name, model, temperature, message) -> str:
+        """Test agent response for given agent name, model, temperature and message."""
         agent_service: AgentService = self._agent_service
         return agent_service.run_agent(name, model, temperature, message)
     
     
-    # [todo agent 1] list papers path
-    
-    
-    # [todo agent 2] def index paper
-    
-    
-    # [todo agent 3] def list indexed papers
+    def list_papers_path(self) -> list[str]:
+        """List relative paths of all available paper files."""
+        retrieval_service: RetrievalService = self._retrieval_service
+        return retrieval_service.list_papers()
 
 
-    # [todo agent 4] def get indexed paper
+    def index_paper(self, paper_path: str, force_reindex: bool = False) -> dict:
+        """Build or reuse the BM25 index for a paper. Returns indexing metadata."""
+        retrieval_service: RetrievalService = self._retrieval_service
+        metadata = retrieval_service.index_paper(paper_path, force_reindex)
+        return metadata.model_dump()
 
-    
-    # [todo agent 5] def test_agent_with_retrieval(self, name, model, temperature, message, top_k)
-    
 
-    
+    def list_indexed_papers(self) -> list[str]:
+        """Return paper_path for every paper that has a persisted BM25 index."""
+        retrieval_service: RetrievalService = self._retrieval_service
+        return retrieval_service.list_indexed_papers()
+
+
+    def get_indexed_paper(self, paper_path: str) -> dict:
+        """Return index metadata for a specific paper. Raises ValueError if not indexed."""
+        retrieval_service: RetrievalService = self._retrieval_service
+        info = retrieval_service.get_indexed_paper(paper_path)
+        return info.model_dump()
+
+
+    def test_agent_with_retrieval(self, name, model, temperature, message: str, paper_path: str, top_k: int | None = None) -> str:
+        """Run an agent using RAG context retrieved from a paper as additional input."""
+        retrieval_service: RetrievalService = self._retrieval_service
+        agent_service: AgentService = self._agent_service
+
+        retrieval = retrieval_service.retrieve_context(paper_path, top_k=top_k)
+        context: str = retrieval["context"]
+        augmented_message = f"{context}\n\n---\n\n{message}"
+        return agent_service.run_agent(name, model, temperature, augmented_message)
+
+
     def compile_graph(self, graph_llm_config: GraphAgentConfig):        
         agent_service: AgentService = self._agent_service
         graph_service: GraphService = self._graph_service

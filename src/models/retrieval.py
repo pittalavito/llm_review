@@ -67,6 +67,14 @@ class RetrievalMetadata(BaseModel):
     top_k: int = Field(ge=1, le=20)
 
 
+class IndexInfo(BaseModel):
+    doc_id: str
+    paper_path: str
+    file_signature: FileSignature
+    settings: IndexConfig
+    chunk_count: int = Field(ge=0)
+
+
 class RetrievalResponse(BaseModel):
     context: str
     metadata: RetrievalMetadata
