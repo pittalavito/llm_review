@@ -1,49 +1,55 @@
-
-import asyncio
-
 from fastapi import Request
+from config import Config
+from graph.config import GraphAgentConfig
 from service.graph_service import GraphService
-from service.llm_service import LlmService
-from service.open_review_service import OpenReviewService
+from service.agent_service import AgentService
 from service.retrieval_service import RetrievalService
-from settings import Settings
 
 
 class Container:
-    """DI container for configuration and LLM client registry."""
-    def __init__(self, settings: Settings):        
-        self.settings = settings
-        self.llm_service = LlmService(settings)
-        self.graph_service = GraphService()
-        self.open_review_service = OpenReviewService()
-        self.retrieval_service = RetrievalService(settings)
+    """DI container for configuration and service registry."""
+
+    def __init__(self, config: Config):
+        self._config = config
+        self._agent_service = AgentService(config)
+        self._retrieval_service = RetrievalService(config)
+        self._graph_service = GraphService(config, self._retrieval_service)
+    
+    
+    def health_check(self) -> dict:
+        version = self._config.app_version
+        return {"status": "ok", "version": version}
+    
+    
+    def test_llm(self, model, temperature, message) -> str:
+        agent_service: AgentService = self._agent_service
+        return agent_service.invoke_client(model, temperature, message)
+    
+    
+    def test_agent(self, name, model, temperature, message) -> str:
+        agent_service: AgentService = self._agent_service
+        return agent_service.run_agent(name, model, temperature, message)
+    
+    
+    def compile_graph(self, graph_llm_config: GraphAgentConfig):        
+        agent_service: AgentService = self._agent_service
+        graph_service: GraphService = self._graph_service
+
+        if graph_llm_config is None:
+            graph_llm_config = graph_service.default_config()            
+            
+        agents = {}
+        for conf in graph_llm_config.agents:
+            angent = agent_service.init_agent(conf.agent_name, conf.model, conf.temperature)
+            agents[conf.agent_name] = angent
+        
+        graph_service.compile(graph_llm_config, agents) 
+    
+    
+    def invoke_graph(self, input_data):
+        graph_service: GraphService = self._graph_service
+        return graph_service.invoke(input_data)  
+
 
 def inject_container(request: Request) -> Container:
-    """Dependency to retrieve the DI container from the request state."""
     return request.app.state.container
-
-def inject_settings(request: Request) -> Settings:
-    """Dependency to retrieve the application settings from the container."""
-    container = inject_container(request)
-    return container.settings   
-
-def inject_llm_service(request: Request) -> LlmService:
-    """Dependency to retrieve the LLM service from the container."""
-    container = inject_container(request)
-    return container.llm_service
-
-def inject_graph_service(request: Request) -> GraphService:
-    """Dependency to retrieve the Graph service from the container."""
-    container = inject_container(request)
-    return container.graph_service
-
-def inject_open_review_service(request: Request) -> OpenReviewService:
-    """Dependency to retrieve the OpenReview service from the container."""
-    container = inject_container(request)
-    return container.open_review_service
-
-
-def inject_retrieval_service(request: Request) -> RetrievalService:
-    """Dependency to retrieve the retrieval service from the container."""
-    container = inject_container(request)
-    return container.retrieval_service

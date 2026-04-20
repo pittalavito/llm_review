@@ -2,7 +2,7 @@
  * sections/graph.js — Graph configuration and execution section.
  */
 
-import { getGraphConfig, listAgents, listModels, putGraphConfig, runGraph, runGraphFromFile } from '../api.js';
+import { getGraphConfig, listModels, putGraphConfig, runGraph, runGraphFromFile } from '../api.js';
 
 function clampTemperature(value) {
   const parsed = Number.parseFloat(value);
@@ -10,16 +10,6 @@ function clampTemperature(value) {
   if (parsed < 0) return 0;
   if (parsed > 1) return 1;
   return parsed;
-}
-
-function parseOptionalInteger(value) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const parsed = Number.parseInt(trimmed, 10);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function resolveTopK(value) {
@@ -104,8 +94,9 @@ function formatGraphResult(payload) {
     const meta = [
       'Retrieval',
       `- index_status: ${asText(retrieval.index_status) || 'n/a'}`,
-      `- chunks_loaded: ${asText(retrieval.chunks_loaded) || 'n/a'}`,
-      `- chunks_used: ${asText(retrieval.chunks_used) || 'n/a'}`,
+      `- chunk_count_total: ${asText(retrieval.chunk_count_total) || 'n/a'}`,
+      `- chunk_count_retrieved: ${asText(retrieval.chunk_count_retrieved) || 'n/a'}`,
+      `- top_k: ${asText(retrieval.top_k) || 'n/a'}`,
     ].join('\n');
     blocks.push(meta);
   }
@@ -129,14 +120,7 @@ export function render() {
           <form class="graph-form" id="graph-config-form" novalidate>
             <div class="graph-grid">
               <label class="graph-field">
-                <span class="graph-field__label">Methodology Reviewer Agent</span>
-                <select class="graph-field__control" id="graph-agent-select">
-                  <option value="">Loading…</option>
-                </select>
-              </label>
-
-              <label class="graph-field">
-                <span class="graph-field__label">Methodology Reviewer Model</span>
+                <span class="graph-field__label">Review Graph Model</span>
                 <select class="graph-field__control" id="graph-model-select">
                   <option value="">Loading…</option>
                 </select>
@@ -160,12 +144,7 @@ export function render() {
 
               <label class="graph-field">
                 <span class="graph-field__label">Max Iterations</span>
-                <input class="graph-field__control" id="graph-iterations-input" type="number" min="1" max="20" value="3" />
-              </label>
-
-              <label class="graph-field graph-field--full">
-                <span class="graph-field__label">Max Tokens</span>
-                <input class="graph-field__control" id="graph-max-tokens-input" type="number" min="1" placeholder="Optional" />
+                <input class="graph-field__control" id="graph-iterations-input" type="number" min="1" max="10" value="3" />
               </label>
             </div>
 
@@ -260,12 +239,10 @@ export function render() {
 export function mount(container) {
   const configForm = container.querySelector('#graph-config-form');
   const runForm = container.querySelector('#graph-run-form');
-  const agentSelect = container.querySelector('#graph-agent-select');
   const modelSelect = container.querySelector('#graph-model-select');
   const temperatureInput = container.querySelector('#graph-temperature-input');
   const temperatureValue = container.querySelector('#graph-temperature-value');
   const iterationsInput = container.querySelector('#graph-iterations-input');
-  const maxTokensInput = container.querySelector('#graph-max-tokens-input');
   const compileButton = container.querySelector('#graph-compile-btn');
   const statusCard = container.querySelector('#graph-status-card');
   const statusBadge = container.querySelector('#graph-status-badge');
@@ -287,11 +264,9 @@ export function mount(container) {
   let graphCompiled = false;
 
   function setBootstrapLoading(loading) {
-    agentSelect.disabled = loading;
     modelSelect.disabled = loading;
     temperatureInput.disabled = loading;
     iterationsInput.disabled = loading;
-    maxTokensInput.disabled = loading;
     compileButton.disabled = loading;
     runModeSelect.disabled = loading;
     paperInput.disabled = loading || !graphCompiled;
@@ -303,11 +278,9 @@ export function mount(container) {
 
   function setCompileLoading(loading) {
     compileButton.disabled = loading;
-    agentSelect.disabled = loading;
     modelSelect.disabled = loading;
     temperatureInput.disabled = loading;
     iterationsInput.disabled = loading;
-    maxTokensInput.disabled = loading;
     compileButton.textContent = loading ? 'Compiling…' : 'Compile Graph';
     runModeSelect.disabled = loading;
     paperInput.disabled = loading || !graphCompiled;
@@ -377,11 +350,9 @@ export function mount(container) {
       return;
     }
 
-    agentSelect.value = config.methodology_reviewer_agent;
-    modelSelect.value = config.methodology_reviewer_model;
-    temperatureInput.value = String(clampTemperature(config.methodology_reviewer_temperature));
+    modelSelect.value = config.model;
+    temperatureInput.value = String(clampTemperature(config.temperature));
     iterationsInput.value = String(config.max_iterations);
-    maxTokensInput.value = config.max_tokens == null ? '' : String(config.max_tokens);
     renderTemperatureValue();
     setGraphCompiled(true);
     showStatus('Current Configuration', config);
@@ -389,14 +360,14 @@ export function mount(container) {
 
   function buildConfigPayload() {
     const iterations = Number.parseInt(iterationsInput.value, 10);
-    const maxTokens = parseOptionalInteger(maxTokensInput.value);
+    const boundedIterations = Number.isFinite(iterations)
+      ? Math.max(1, Math.min(10, iterations))
+      : 3;
 
     return {
-      methodology_reviewer_agent: agentSelect.value,
-      methodology_reviewer_model: modelSelect.value,
-      methodology_reviewer_temperature: clampTemperature(temperatureInput.value),
-      max_iterations: Number.isFinite(iterations) ? iterations : 3,
-      max_tokens: maxTokens,
+      model: modelSelect.value,
+      temperature: clampTemperature(temperatureInput.value),
+      max_iterations: boundedIterations,
     };
   }
 
@@ -408,19 +379,10 @@ export function mount(container) {
   renderRunMode();
   setGraphCompiled(false);
   setBootstrapLoading(true);
-  showStatus('Loading Graph Setup', 'Loading agents, models, and the current graph configuration...');
+  showStatus('Loading Graph Setup', 'Loading models and the current graph configuration...');
 
-  Promise.all([listAgents(), listModels(), getGraphConfig()])
-    .then(([agents, models, config]) => {
-      agentSelect.innerHTML = '';
-      const supportedAgents = agents.filter((agent) => agent === 'methodology_reviewer');
-      for (const agent of supportedAgents) {
-        const option = document.createElement('option');
-        option.value = agent;
-        option.textContent = agent;
-        agentSelect.appendChild(option);
-      }
-
+  Promise.all([listModels(), getGraphConfig()])
+    .then(([models, config]) => {
       modelSelect.innerHTML = '';
       for (const model of models) {
         const option = document.createElement('option');
@@ -429,9 +391,6 @@ export function mount(container) {
         modelSelect.appendChild(option);
       }
 
-      if (supportedAgents.includes('methodology_reviewer')) {
-        agentSelect.value = 'methodology_reviewer';
-      }
       if (models.includes('mock')) {
         modelSelect.value = 'mock';
       }
@@ -442,7 +401,6 @@ export function mount(container) {
       }
     })
     .catch((err) => {
-      agentSelect.innerHTML = '<option value="">Unavailable</option>';
       modelSelect.innerHTML = '<option value="">Unavailable</option>';
       setGraphCompiled(false);
       showStatus('Configuration Error', err.message, true);
@@ -454,8 +412,8 @@ export function mount(container) {
   configForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    if (!agentSelect.value || !modelSelect.value) {
-      showStatus('Configuration Error', 'Load agents and models before compiling the graph.', true);
+    if (!modelSelect.value) {
+      showStatus('Configuration Error', 'Load models before compiling the graph.', true);
       return;
     }
 

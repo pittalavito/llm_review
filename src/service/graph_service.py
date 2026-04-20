@@ -1,75 +1,72 @@
-import asyncio
-from typing import Any
+import logging
+import threading
 
-from factory.graph_factory import GraphFactory
-from schemas.controller.dev_controller import GraphCompileRequest
-from schemas.graph.graph import GraphState
-from service.llm_service import LlmService
+from config import Config
+from agent.base import BaseAgent
+from graph.graph_builder import GraphBuilder
+from graph.config import AgentLLMConfig, GraphAgentConfig
+from graph.state import ReviewState
+from agent.models.enums import AgentName, LlmModelName
 from service.retrieval_service import RetrievalService
 
+logger = logging.getLogger(__name__)
+
+_DEFAULT_MODEL = LlmModelName.OLLAMA_LLAMA32
+_DEFAULT_TEMPERATURE = 0.7
 
 class GraphService:
-    
-    def __init__(self):
-        self.graph_config: GraphCompileRequest | None = None
-        self.graph: Any = None
-        self.graph_lock = asyncio.Lock()
-    
-    def get_config(self) -> GraphCompileRequest | None:
-        """Get the current graph configuration."""
-        return self.graph_config
-    
-    async def compile_graph(self, config: GraphCompileRequest, llm_service: LlmService):
-        """Compile the graph with the given configuration and store it in memory."""
-        async with self.graph_lock:
-            self.graph_config = config
-            self.graph = GraphFactory.build(
-                config=config,
-                llm_service=llm_service,
-            )
-                        
-    def invoke(self, input_data: dict) -> dict:
-        """Invoke the graph synchronously with the given input data."""
-        if self.graph is None:
-            raise ValueError("Graph is not compiled yet.")
-        initial_state = self._build_initial_state(input_data["paper"])
-        return self.graph.invoke(initial_state)
-    
-    async def invoke_async(self, input_data: dict) -> dict:
-        """Invoke the graph asynchronously with the given input data."""
-        if self.graph is None:
-            raise ValueError("Graph is not compiled yet.")
-            
-        initial_state = self._build_initial_state(input_data["paper"])
-        return await self.graph.ainvoke(initial_state)
 
-    def invoke_from_file(
-        self,
-        retrieval_service: RetrievalService,
-        paper_path: str,
-        top_k: int | None = None,
-        force_reindex: bool = False,
-    ) -> tuple[dict, dict]:
-        """Retrieve context from a file and invoke the graph."""
-        retrieval_result = retrieval_service.retrieve_for_methodology_review(
+    def __init__(self, config: Config, retrieval_service: RetrievalService):
+        self._config = config
+        self._retrieval_service = retrieval_service
+        self._agents: dict[AgentName, BaseAgent] = {}
+        self._graph = None
+        self._lock = threading.Lock()
+
+
+    def compile(self, graph_agent_config: GraphAgentConfig, agents: dict[AgentName, BaseAgent]) -> None:
+        """Crea gli agenti con i client specificati e compila il grafo."""    
+        with self._lock:
+            self._agents = agents
+            
+            state = GraphBuilder.build(self._agents, self._retrieval_service)
+            self._graph = state.compile()
+        
+        logger.info("Graph compiled with %d agents, max_rounds=%d", len(graph_agent_config.agents), graph_agent_config.max_rounds)
+
+
+    def invoke(self, paper_path: str, rag_top_k: int | None = None, force_reindex: bool = False) -> tuple[dict, dict]:
+        """Esegue il grafo in modalità RAG. Unico entry point per la review."""
+        if self._graph is None:
+            raise RuntimeError("Graph not compiled. Call compile_graph() first.")
+
+        _, relative_path, retrieval_metadata = self._retrieval_service.prepare_and_get_text(
             paper_path=paper_path,
-            top_k=top_k,
+            top_k=rag_top_k,
             force_reindex=force_reindex,
         )
-        context = retrieval_result["context"]
-        metadata = retrieval_result["metadata"]
 
-        result = self.invoke({"paper": context})
-        return result, metadata
+        initial_state = self._initial_state(relative_path, rag_top_k, retrieval_metadata)
+        result = self._graph.invoke(initial_state)
+        return result, retrieval_metadata
+
+
+    def default_config(self) -> GraphAgentConfig:
+        agents: list[AgentLLMConfig] = []
+        for name in list(AgentName):
+            config = AgentLLMConfig(agent_name=name, model=_DEFAULT_MODEL, temperature=_DEFAULT_TEMPERATURE)    
+            agents.append(config)    
+        return GraphAgentConfig(agents=agents)        
+
     
-    def _build_initial_state(self, paper: str) -> GraphState:
-        if self.graph_config is None:
-            raise ValueError("Graph is not compiled yet.")
-
+    def _initial_state(paper_path: str, rag_top_k: int | None, retrieval_metadata: dict) -> ReviewState:
         return {
-            "paper": paper,
-            "messages": [],
+            "paper_path": paper_path,
+            "rag_top_k": rag_top_k,
+            "retrieval_metadata": retrieval_metadata,
             "reviews": [],
-            "current_round": 0,
-            "max_rounds": self.graph_config.max_iterations,
+            "meta_review": None,
+            "decision": None,
+            "revision_notes": None,
+            "current_round": 0
         }

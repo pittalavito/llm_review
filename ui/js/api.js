@@ -78,6 +78,31 @@ export async function testAgent(payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) {
+    const body = await readJsonOrText(res);
+    const detail = typeof body === 'string' ? body : body?.detail;
+    const message =
+      typeof detail === 'string'
+        ? detail
+        : detail?.error || JSON.stringify(detail) || `HTTP ${res.status} ${res.statusText}`;
+    const err = new Error(message);
+    err.llmRawOutput = typeof detail === 'object' && detail !== null ? (detail.llm_raw_output ?? null) : null;
+    throw err;
+  }
+  return res.json();
+}
+
+/**
+ * POST /dev/agents/prompt-preview
+ * @param {{ name: string, message: string }} payload
+ * @returns {Promise<{ agent: string, system_prompt: string, schema_instructions: string, message_section: string, full_prompt: string }>}
+ */
+export async function previewAgentPrompt(payload) {
+  const res = await fetch(`${BASE_URL}/agents/prompt-preview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
   await throwForResponse(res);
   return res.json();
 }
@@ -85,11 +110,9 @@ export async function testAgent(payload) {
 /**
  * GET /dev/graph-config
  * @returns {Promise<null | {
- *   methodology_reviewer_agent: string,
- *   methodology_reviewer_model: string,
- *   methodology_reviewer_temperature: number,
+ *   model: string,
+ *   temperature: number,
  *   max_iterations: number,
- *   max_tokens: number | null,
  * }>}
  */
 export async function getGraphConfig() {
@@ -101,11 +124,9 @@ export async function getGraphConfig() {
 /**
  * PUT /dev/graph-config
  * @param {{
- *   methodology_reviewer_agent: string,
- *   methodology_reviewer_model: string,
- *   methodology_reviewer_temperature: number,
+ *   model: string,
+ *   temperature: number,
  *   max_iterations: number,
- *   max_tokens: number | null,
  * }} payload
  */
 export async function putGraphConfig(payload) {
