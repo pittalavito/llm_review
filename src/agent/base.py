@@ -1,12 +1,11 @@
 import logging
-import json
 
 from abc import ABC
 from pydantic import BaseModel
+from llm_client.base_client import BaseLLMClient
 from agent.adapter import LlmResponseAdapter
 from agent.builder import PromptBuilder
-from client.base_client import BaseLLMClient
-from agent.models.enums import AgentName
+from models.agent import AgentName
 
 logger = logging.getLogger(__name__)
 

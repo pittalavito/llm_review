@@ -2,11 +2,10 @@ import logging
 
 from container import Container, inject_container
 from fastapi import APIRouter, Depends, HTTPException
-from agent.models.agent_structured_output import AgentStructuredOutput
 from agent.base import BaseAgent
-from models.models import PreviewPromptRequest, TestAgentRequest, TestLlmRequest
 from agent.builder import PromptBuilder
-from agent.models.enums import AgentName, LlmModelName
+from models.controller import PreviewPromptRequest, TestAgentRequest, TestLlmRequest
+from models.agent import AgentName, LlmModelName, AgentResponse
 
 PREFIX = "/dev"
 URL_HEALTH = "/health"
@@ -46,11 +45,11 @@ def list_agents() -> list[AgentName]:
 
 
 # da capire se AgentStructuredOutput serve
-@router.post(URL_AGENTS, response_model=AgentStructuredOutput)
-def test_agent(body: TestAgentRequest, container: Container = Depends(inject_container)) -> AgentStructuredOutput:
+@router.post(URL_AGENTS, response_model=AgentResponse)
+def test_agent(body: TestAgentRequest, container: Container = Depends(inject_container)) -> AgentResponse:
     try:
         raw_result = container.test_agent(body.name, body.model, body.temperature, body.message)
-        return AgentStructuredOutput.from_raw(raw_result)
+        return AgentResponse.from_raw(raw_result)
     except ValueError as exc:
         logger.exception("Agent validation failed for agent '%s'", body.name)
         raise HTTPException(status_code=400, detail=f"Agent error: {exc}") from exc

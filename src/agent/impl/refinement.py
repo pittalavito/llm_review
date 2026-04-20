@@ -1,7 +1,6 @@
-from agent.base import BaseAgent
-from agent.models.refinement import RefinementResponse
-from agent.models.enums import AgentName
 
+from agent.base import BaseAgent
+from models.agent import AgentName, RefinementResponse
 
 class RefinementAgent(BaseAgent):
     AGENT_NAME = AgentName.REFINEMENT_AGENT

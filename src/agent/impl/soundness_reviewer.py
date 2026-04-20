@@ -1,7 +1,6 @@
-from agent.base import BaseAgent
-from agent.models.review import SoundnessReviewResponse
-from agent.models.enums import AgentName
 
+from agent.base import BaseAgent
+from models.agent import AgentName, SoundnessReviewResponse
 
 class SoundnessReviewerAgent(BaseAgent):
     AGENT_NAME = AgentName.SOUNDNESS_REVIEWER

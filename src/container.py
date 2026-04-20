@@ -31,12 +31,28 @@ class Container:
         return agent_service.run_agent(name, model, temperature, message)
     
     
+    # [todo agent 1] list papers path
+    
+    
+    # [todo agent 2] def index paper
+    
+    
+    # [todo agent 3] def list indexed papers
+
+
+    # [todo agent 4] def get indexed paper
+
+    
+    # [todo agent 5] def test_agent_with_retrieval(self, name, model, temperature, message, top_k)
+    
+
+    
     def compile_graph(self, graph_llm_config: GraphAgentConfig):        
         agent_service: AgentService = self._agent_service
         graph_service: GraphService = self._graph_service
 
         if graph_llm_config is None:
-            graph_llm_config = graph_service.default_config()            
+            graph_llm_config = GraphAgentConfig.default_config()           
             
         agents = {}
         for conf in graph_llm_config.agents:

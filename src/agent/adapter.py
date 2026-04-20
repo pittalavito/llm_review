@@ -1,10 +1,9 @@
 import json
+
 from typing import TypeVar
-
 from pydantic import BaseModel
+from models.agent import AgentResponse, AgentName
 
-from agent.models.agent_structured_output import AgentStructuredOutput
-from agent.models.enums import AgentName
 
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
@@ -15,7 +14,7 @@ class LlmResponseAdapter:
     Responsibilities:
     - Extract a JSON candidate from noisy LLM output (markdown fences, extra text)
     - Parse and validate JSON against a Pydantic schema
-    - Serialize the validated payload into the AgentStructuredOutput envelope
+    - Serialize the validated payload into the AgentResponse envelope
     """
 
     @staticmethod
@@ -49,6 +48,6 @@ class LlmResponseAdapter:
 
     @staticmethod
     def to_structured_output(name: AgentName, payload: dict) -> str:
-        """Wrap a validated payload dict in the AgentStructuredOutput envelope and serialize."""
-        envelope = AgentStructuredOutput(agent=name, payload=payload)
+        """Wrap a validated payload dict in the AgentResponse envelope and serialize."""
+        envelope = AgentResponse(agent=name, payload=payload)
         return envelope.model_dump_json(ensure_ascii=False)

@@ -1,7 +1,6 @@
-from agent.base import BaseAgent
-from agent.models.review import PresentationReviewResponse
-from agent.models.enums import AgentName
 
+from agent.base import BaseAgent
+from models.agent import AgentName, PresentationReviewResponse 
 
 class PresentationReviewerAgent(BaseAgent):
     AGENT_NAME = AgentName.PRESENTATION_REVIEWER

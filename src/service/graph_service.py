@@ -2,17 +2,15 @@ import logging
 import threading
 
 from config import Config
+from models.agent import AgentName
 from agent.base import BaseAgent
-from graph.graph_builder import GraphBuilder
-from graph.config import AgentLLMConfig, GraphAgentConfig
+from graph.builder import GraphBuilder
+from graph.config import GraphAgentConfig
 from graph.state import ReviewState
-from agent.models.enums import AgentName, LlmModelName
 from service.retrieval_service import RetrievalService
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL = LlmModelName.OLLAMA_LLAMA32
-_DEFAULT_TEMPERATURE = 0.7
 
 class GraphService:
 
@@ -48,15 +46,7 @@ class GraphService:
 
         initial_state = self._initial_state(relative_path, rag_top_k, retrieval_metadata)
         result = self._graph.invoke(initial_state)
-        return result, retrieval_metadata
-
-
-    def default_config(self) -> GraphAgentConfig:
-        agents: list[AgentLLMConfig] = []
-        for name in list(AgentName):
-            config = AgentLLMConfig(agent_name=name, model=_DEFAULT_MODEL, temperature=_DEFAULT_TEMPERATURE)    
-            agents.append(config)    
-        return GraphAgentConfig(agents=agents)        
+        return result, retrieval_metadata      
 
     
     def _initial_state(paper_path: str, rag_top_k: int | None, retrieval_metadata: dict) -> ReviewState:

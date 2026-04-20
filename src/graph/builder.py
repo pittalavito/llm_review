@@ -1,11 +1,9 @@
 import json
-from typing import Any
 
 from langgraph.graph import END, StateGraph
-
+from models.agent import AgentName, ReviewDecision
 from agent.base import BaseAgent
 from graph.state import ReviewState
-from agent.models.enums import AgentName, ReviewDecision
 from retrieval.protocols import RetrievalContextProvider
 
 

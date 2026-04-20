@@ -1,11 +1,7 @@
-from client.base_client import BaseLLMClient
-from agent.models.review import (
-    ContributionReviewResponse,
-    PresentationReviewResponse,
-    SoundnessReviewResponse,
-)
-from agent.models.meta_review import MetaReviewResponse
-from agent.models.refinement import RefinementResponse
+
+from llm_client.base_client import BaseLLMClient
+
+from models.agent import ContributionReviewResponse, PresentationReviewResponse, SoundnessReviewResponse, MetaReviewResponse, RefinementResponse
 
 MOCK_RESPONSE_PREFIX = "Here is a mock response for your prompt: "
 

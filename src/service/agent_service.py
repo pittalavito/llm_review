@@ -2,21 +2,17 @@
 import logging
 
 from threading import RLock
-
-from llm_client.base_client import BaseLLMClient
+from config import Config
 from llm_client.base_client import BaseLLMClient
 from llm_client.mock_client import MockLLMClient
 from llm_client.ollama_client import OllamaLLMClient
-
+from models.agent import AgentName, LlmModelName
 from agent.base import BaseAgent
 from agent.impl.contribution_reviewer import ContributionReviewerAgent
 from agent.impl.meta_reviewer import MetaReviewerAgent
 from agent.impl.presentation_reviewer import PresentationReviewerAgent
 from agent.impl.refinement import RefinementAgent
 from agent.impl.soundness_reviewer import SoundnessReviewerAgent
-from agent.models.enums import AgentName, LlmModelName
-
-from config import Config
 
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,6 @@
-from agent.base import BaseAgent
-from agent.models.meta_review import MetaReviewResponse
-from agent.models.enums import AgentName
 
+from agent.base import BaseAgent
+from models.agent import AgentName, MetaReviewResponse
 
 class MetaReviewerAgent(BaseAgent):
     AGENT_NAME = AgentName.META_REVIEWER

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 
-from agent.models.enums import AgentName, LlmModelName
+from models.agent import AgentName, LlmModelName
 
 class TestLlmRequest(BaseModel):
     model: LlmModelName
