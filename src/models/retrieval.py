@@ -35,6 +35,7 @@ class IndexedChunk(BaseModel):
     text: str
     token_counts: dict[str, int]
     length: int = Field(ge=1)
+    section: str = "unknown"
 
 
 class IndexConfig(BaseModel):
@@ -57,6 +58,7 @@ class RetrievedChunk(BaseModel):
     score: float = Field(ge=0)
     index: int = Field(ge=0)
     text: str
+    section: str = "unknown"
 
 
 class RetrievalMetadata(BaseModel):

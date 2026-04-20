@@ -49,6 +49,7 @@ class BM25Ranker:
                 score=round(score, 4),
                 index=chunk_index,
                 text=chunk.text,
+                section=chunk.section,
             )
             for rank, (score, chunk_index, chunk) in enumerate(selected)
         ]

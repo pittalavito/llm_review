@@ -36,8 +36,8 @@ class Config(BaseSettings):
     ollama_keep_alive: str = "10m"
 
     # --- Retrieval ---
-    rag_chunk_size: int = 1_200
-    rag_chunk_overlap: int = 200
+    rag_chunk_size: int = 800
+    rag_chunk_overlap: int = 150
     rag_top_k_default: int = 6
     rag_max_context_chars: int = 12_000
-    rag_strategy_version: str = "bm25-v1"
+    rag_strategy_version: str = "bm25-v2-section"
