@@ -174,6 +174,10 @@ class IndexBuilder:
         return None
 
     def _sliding_window(self, text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
+        if chunk_size <= 0:
+            raise ValueError("Invalid chunk size. It must be greater than zero.")
+        if chunk_overlap < 0 or chunk_overlap >= chunk_size:
+            raise ValueError("Invalid chunk overlap. It must be between 0 and chunk_size - 1.")
         chunks: list[str] = []
         start = 0
         text_length = len(text)
