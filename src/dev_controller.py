@@ -2,6 +2,7 @@ import logging
 
 from container import Container, inject_container
 from fastapi import APIRouter, Depends, HTTPException
+from graph.config import GraphAgentConfig
 from models.controller import GraphRunRequest, IndexPaperRequest, PreviewPromptRequest, TestAgentRequest, TestAgentWithRetrievalRequest, TestLlmRequest
 from models.agent import AgentName, LlmModelName, AgentResponse
 
@@ -18,6 +19,8 @@ URL_PAPERS_INDEXED = "/papers/indexed"
 URL_PAPERS_INDEXED_DETAIL = "/papers/indexed/detail"
 URL_GRAPH_COMPILE = "/graph/compile"
 URL_GRAPH_RUN = "/graph/run"
+URL_RUNS = "/runs"
+URL_RUN_DETAIL = "/runs/{run_id}"
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +43,11 @@ def list_models() -> list[LlmModelName]:
 def test_llm(body: TestLlmRequest, container: Container = Depends(inject_container)) -> str:
     """Test LLM response for given model, temperature and message."""
     try:
-        return container.test_llm(body.model, body.temperature, body.message)
+        return container.test_llm(
+            body.model, 
+            body.temperature, 
+            body.message
+        )
     except Exception as exc:
         logger.exception("LLM call failed for model '%s'", body.model)
         raise HTTPException(status_code=500, detail=f"LLM error: {exc}") from exc
@@ -62,7 +69,10 @@ def list_papers(container: Container = Depends(inject_container)) -> list[str]:
 def index_paper(body: IndexPaperRequest, container: Container = Depends(inject_container)) -> dict:
     """Build or reuse the BM25 index for a paper."""
     try:
-        return container.index_paper(body.paper_path, body.force_reindex)
+        return container.index_paper(
+            body.paper_path, 
+            body.force_reindex
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -92,7 +102,12 @@ def get_indexed_paper(paper_path: str, container: Container = Depends(inject_con
 def test_agent(body: TestAgentRequest, container: Container = Depends(inject_container)):
     """Test agent response for given agent name, model, temperature and message."""
     try:
-        return container.test_agent(body.name, body.model, body.temperature, body.message)
+        return container.test_agent(
+            body.name, 
+            body.model, 
+            body.temperature, 
+            body.message
+        )
     except ValueError as exc:
         logger.exception("Agent validation failed for agent '%s'", body.name)
         raise HTTPException(status_code=400, detail=f"Agent error: {exc}") from exc
@@ -104,7 +119,10 @@ def test_agent(body: TestAgentRequest, container: Container = Depends(inject_con
 @router.post(URL_AGENT_PROMPT_PREVIEW)
 def agent_prompt_preview(body: PreviewPromptRequest, container: Container = Depends(inject_container)) -> dict:
     try:
-        return container.build_agent_prompt(body.name, body.message)
+        return container.build_agent_prompt(
+            body.name, 
+            body.message
+        )
     except Exception as exc:
         logger.exception("Failed to get prompt preview for agent '%s'", body.name)
         raise HTTPException(status_code=500, detail=f"Error: {exc}") from exc
@@ -115,7 +133,12 @@ def test_agent_with_retrieval(body: TestAgentWithRetrievalRequest, container: Co
     """Run an agent with RAG context retrieved from a paper injected into the message."""
     try:
         return container.test_agent_with_retrieval(
-            body.name, body.model, body.temperature, body.message, body.paper_path, body.top_k
+            body.name, 
+            body.model, 
+            body.temperature, 
+            body.message, 
+            body.paper_path, 
+            body.top_k
         )
     except ValueError as exc:
         logger.exception("Agent-with-retrieval validation failed for agent '%s'", body.name)
@@ -126,12 +149,10 @@ def test_agent_with_retrieval(body: TestAgentWithRetrievalRequest, container: Co
 
 
 @router.post(URL_GRAPH_COMPILE, response_model=dict)
-def compile_graph(body: dict | None = None, container: Container = Depends(inject_container)) -> dict:
+def compile_graph(body: GraphAgentConfig | None = None, container: Container = Depends(inject_container)) -> dict:
     """Compile the review graph with optional config. Uses default config if omitted."""
     try:
-        from graph.config import GraphAgentConfig
-        graph_config = GraphAgentConfig.model_validate(body) if body else None
-        container.compile_graph(graph_config)
+        container.compile_graph(body)
         return {"status": "compiled"}
     except Exception as exc:
         logger.exception("Graph compilation failed")
@@ -164,3 +185,21 @@ def run_graph(body: GraphRunRequest, container: Container = Depends(inject_conta
     except Exception as exc:
         logger.exception("Graph run failed for paper '%s'", body.paper_path)
         raise HTTPException(status_code=500, detail=f"Graph error: {exc}") from exc
+
+
+@router.get(URL_RUNS)
+def list_runs(container: Container = Depends(inject_container)) -> list:
+    """List all past graph run summaries (lightweight)."""
+    return container.list_runs()
+
+
+@router.get(URL_RUN_DETAIL)
+def get_run(run_id: str, container: Container = Depends(inject_container)) -> dict:
+    """Return full detail of a specific run including per-agent traces."""
+    try:
+        return container.get_run(run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Failed to load run '%s'", run_id)
+        raise HTTPException(status_code=500, detail=f"Error: {exc}") from exc

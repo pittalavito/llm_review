@@ -155,6 +155,57 @@ export async function getIndexedPaperDetail(paperPath) {
 }
 
 /**
+ * POST /dev/graph/compile
+ * @param {object|null} graphConfig
+ * @returns {Promise<{ status: string }>}
+ */
+export async function compileGraph(graphConfig = null) {
+  const res = await fetch(`${BASE_URL}/graph/compile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(graphConfig),
+  });
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * POST /dev/graph/run
+ * @param {{ paper_path: string, rag_top_k?: number, force_reindex?: boolean, graph_config?: object }} payload
+ * @returns {Promise<object>}
+ */
+export async function runGraph(payload) {
+  const res = await fetch(`${BASE_URL}/graph/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * GET /dev/runs
+ * @returns {Promise<Array<{ run_id: string, timestamp: string, paper_path: string, decision: string, total_rounds: number }>>}
+ */
+export async function listRuns() {
+  const res = await fetch(`${BASE_URL}/runs`);
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * GET /dev/runs/{run_id}
+ * @param {string} runId
+ * @returns {Promise<object>}
+ */
+export async function getRun(runId) {
+  const res = await fetch(`${BASE_URL}/runs/${encodeURIComponent(runId)}`);
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
  * POST /dev/agents/retrieval
  * @param {{ name: string, model: string, temperature: number, message: string, paper_path: string, top_k?: number }} payload
  * @returns {Promise<{ agent: string, payload: Record<string, unknown> }>}

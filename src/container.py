@@ -76,8 +76,17 @@ class Container:
         agents = self._agent_service.init_agents_from_graph_config(graph_config, self._retrieval_service)
         self._graph_service.compile(agents, graph_config)
 
+
     def invoke_graph(self, paper_path: str, rag_top_k: int | None = None, force_reindex: bool = False) -> tuple[dict, dict]:
-        return self._graph_service.invoke(paper_path, rag_top_k, force_reindex)  
+        return self._graph_service.invoke(paper_path, rag_top_k, force_reindex)
+
+
+    def list_runs(self) -> list:
+        return self._graph_service.list_runs()
+
+
+    def get_run(self, run_id: str) -> dict:
+        return self._graph_service.get_run(run_id).model_dump()
 
 
 def inject_container(request: Request) -> Container:

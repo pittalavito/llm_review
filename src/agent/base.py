@@ -54,7 +54,8 @@ class BaseAgent(ABC, Generic[T]):
 
         logger.info("Running agent '%s' (paper_path=%s)", self.name, paper_path)
 
-        context_block = self._resolve_context(paper_path)
+        raw_context = self._get_raw_context(paper_path)
+        context_block = self._format_context_block(raw_context)
 
         try:
             result = self._chain.invoke({"message": normalized, "context": context_block})
@@ -62,7 +63,12 @@ class BaseAgent(ABC, Generic[T]):
             raise AgentValidationError(str(exc)) from exc
 
         payload = self._extract_payload(result)
-        return AgentResponse(agent=self.name, payload=payload)
+        return AgentResponse(
+            agent=self.name,
+            payload=payload,
+            input_message=normalized,
+            context_used=raw_context or None,
+        )
 
     @classmethod
     def build_preview(cls, message: str, context: str = "") -> dict:
@@ -107,11 +113,10 @@ class BaseAgent(ABC, Generic[T]):
             return self._prompt | llm.with_structured_output(self.RESPONSE_SCHEMA)
         return self._prompt | llm
 
-    def _resolve_context(self, paper_path: str | None) -> str:
+    def _get_raw_context(self, paper_path: str | None) -> str:
         if not paper_path or not self._context_provider:
             return ""
-        raw = self._context_provider.get_context(paper_path)
-        return self._format_context_block(raw)
+        return self._context_provider.get_context(paper_path)
 
     @staticmethod
     def _format_context_block(raw_context: str) -> str:

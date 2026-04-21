@@ -11,6 +11,7 @@ UI_DIR = _ROOT / "ui"
 RESOURCE_DIR = _ROOT / "resource"
 PAPERS_DIR = RESOURCE_DIR / "papers"
 RAG_INDEX_DIR = RESOURCE_DIR / "rag-index"
+RESULTS_DIR = RESOURCE_DIR / "results"
 
 APP_VERSION = "0.1.0"
 

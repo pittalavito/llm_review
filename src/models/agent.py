@@ -65,6 +65,8 @@ class RawResponse(BaseModel):
 class AgentResponse(BaseModel, Generic[T]):
     agent: AgentName
     payload: T
+    input_message: str | None = None
+    context_used: str | None = None
 
     def to_json(self) -> str:
         return self.model_dump_json(ensure_ascii=False)

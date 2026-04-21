@@ -2,6 +2,7 @@ import json
 
 from langgraph.graph import END, StateGraph
 from models.agent import AgentName, ReviewDecision
+from models.run_record import AgentRun
 from agent.base import BaseAgent
 from graph.state import ReviewState
 
@@ -59,7 +60,14 @@ class GraphBuilder:
                 message += f"\n\nNote di revisione dal round precedente:\n{revision_notes}"
 
             response = agent.run(message, paper_path=paper_path)
-            return {"reviews": [response.to_json()]}
+            agent_run = AgentRun(
+                agent=response.agent,
+                round=state["current_round"],
+                input_message=response.input_message or message,
+                context_used=response.context_used,
+                response_payload=response.payload.model_dump(),
+            )
+            return {"reviews": [response.to_json()], "agent_runs": [agent_run.model_dump()]}
 
         return node
 
@@ -72,10 +80,18 @@ class GraphBuilder:
             response = agent.run(reviews_text)
             payload = response.payload  # MetaReviewResponse — typed
 
+            agent_run = AgentRun(
+                agent=response.agent,
+                round=state["current_round"],
+                input_message=response.input_message or reviews_text,
+                context_used=response.context_used,
+                response_payload=payload.model_dump(),
+            )
             return {
                 "meta_review": payload.model_dump(),
                 "decision": payload.decision,
                 "current_round": state["current_round"] + 1,
+                "agent_runs": [agent_run.model_dump()],
             }
 
         return node
@@ -90,7 +106,17 @@ class GraphBuilder:
             response = agent.run(message, paper_path=paper_path)
             payload = response.payload  # RefinementResponse — typed
 
-            return {"revision_notes": payload.revision_summary}
+            agent_run = AgentRun(
+                agent=response.agent,
+                round=state["current_round"] - 1,
+                input_message=response.input_message or message,
+                context_used=response.context_used,
+                response_payload=payload.model_dump(),
+            )
+            return {
+                "revision_notes": payload.revision_summary,
+                "agent_runs": [agent_run.model_dump()],
+            }
 
         return node
 

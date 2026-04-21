@@ -29,3 +29,6 @@ class ReviewState(TypedDict):
 
     # Numero massimo di round di revisione prima di forzare la fine
     max_rounds: int
+
+    # Cronologia invocazioni agenti — accumulata su tutti i round
+    agent_runs: Annotated[list, operator.add]
