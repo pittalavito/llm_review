@@ -36,3 +36,8 @@ Thumbs.db
 
 # retrieval cache
 resource/rag-index/*.json
+
+# paper
+resource/paper/*.pdf
+resource/other
+
