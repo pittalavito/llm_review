@@ -71,16 +71,13 @@ class Container:
         return agent.run(message, paper_path=paper_path)
 
 
-    def compile_graph(self, agents_config: GraphAgentConfig = GraphAgentConfig.default_config()):        
-        agent_service: AgentService = self._agent_service
-        graph_service: GraphService = self._graph_service         
-        agents = agent_service.init_agents_from_graph_config(agents_config, self._retrieval_service)
-        graph_service.compile(agents) 
-    
-    
-    def invoke_graph(self, input_data):
-        graph_service: GraphService = self._graph_service
-        return graph_service.invoke(input_data)  
+    def compile_graph(self, graph_config: GraphAgentConfig | None = None) -> None:
+        graph_config = graph_config or GraphAgentConfig.default_config()
+        agents = self._agent_service.init_agents_from_graph_config(graph_config, self._retrieval_service)
+        self._graph_service.compile(agents, graph_config)
+
+    def invoke_graph(self, paper_path: str, rag_top_k: int | None = None, force_reindex: bool = False) -> tuple[dict, dict]:
+        return self._graph_service.invoke(paper_path, rag_top_k, force_reindex)  
 
 
 def inject_container(request: Request) -> Container:

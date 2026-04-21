@@ -2,7 +2,7 @@ import logging
 
 from container import Container, inject_container
 from fastapi import APIRouter, Depends, HTTPException
-from models.controller import IndexPaperRequest, PreviewPromptRequest, TestAgentRequest, TestAgentWithRetrievalRequest, TestLlmRequest
+from models.controller import GraphRunRequest, IndexPaperRequest, PreviewPromptRequest, TestAgentRequest, TestAgentWithRetrievalRequest, TestLlmRequest
 from models.agent import AgentName, LlmModelName, AgentResponse
 
 PREFIX = "/dev"
@@ -16,6 +16,8 @@ URL_PAPERS = "/papers"
 URL_PAPERS_INDEX = "/papers/index"
 URL_PAPERS_INDEXED = "/papers/indexed"
 URL_PAPERS_INDEXED_DETAIL = "/papers/indexed/detail"
+URL_GRAPH_COMPILE = "/graph/compile"
+URL_GRAPH_RUN = "/graph/run"
 
 
 logger = logging.getLogger(__name__)
@@ -121,3 +123,44 @@ def test_agent_with_retrieval(body: TestAgentWithRetrievalRequest, container: Co
     except Exception as exc:
         logger.exception("Agent-with-retrieval call failed for agent '%s'", body.name)
         raise HTTPException(status_code=500, detail=f"Agent error: {exc}") from exc
+
+
+@router.post(URL_GRAPH_COMPILE, response_model=dict)
+def compile_graph(body: dict | None = None, container: Container = Depends(inject_container)) -> dict:
+    """Compile the review graph with optional config. Uses default config if omitted."""
+    try:
+        from graph.config import GraphAgentConfig
+        graph_config = GraphAgentConfig.model_validate(body) if body else None
+        container.compile_graph(graph_config)
+        return {"status": "compiled"}
+    except Exception as exc:
+        logger.exception("Graph compilation failed")
+        raise HTTPException(status_code=500, detail=f"Graph compile error: {exc}") from exc
+
+
+@router.post(URL_GRAPH_RUN)
+def run_graph(body: GraphRunRequest, container: Container = Depends(inject_container)) -> dict:
+    """Run the full review pipeline on a paper. Compiles with provided config if given."""
+    try:
+        if body.graph_config:
+            container.compile_graph(body.graph_config)
+        result, metadata = container.invoke_graph(
+            paper_path=body.paper_path,
+            rag_top_k=body.rag_top_k,
+            force_reindex=body.force_reindex,
+        )
+        return {
+            "decision": result.get("decision"),
+            "current_round": result.get("current_round"),
+            "meta_review": result.get("meta_review"),
+            "reviews": result.get("reviews", []),
+            "revision_notes": result.get("revision_notes"),
+            "retrieval_metadata": metadata,
+        }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Graph run failed for paper '%s'", body.paper_path)
+        raise HTTPException(status_code=500, detail=f"Graph error: {exc}") from exc

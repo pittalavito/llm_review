@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 
 from models.agent import AgentName, LlmModelName
+from graph.config import GraphAgentConfig
 
 class TestLlmRequest(BaseModel):
     model: LlmModelName
@@ -89,5 +90,20 @@ class PreviewPromptResponse(BaseModel):
     schema_instructions: str
     message_section: str
     full_prompt: str
+
+
+class GraphRunRequest(BaseModel):
+    paper_path: str = Field(min_length=1, max_length=500)
+    rag_top_k: int | None = Field(default=None, ge=1, le=20)
+    force_reindex: bool = False
+    graph_config: GraphAgentConfig | None = None
+
+    @field_validator("paper_path")
+    @classmethod
+    def validate_path(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Paper path must not be empty.")
+        return stripped
 
 

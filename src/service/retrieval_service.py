@@ -6,7 +6,7 @@ from retrieval.index_repository import IndexRepository
 from retrieval.context_builder import ContextBuilder
 from retrieval.index_builder import IndexBuilder
 from retrieval.ranker import BM25Ranker
-from models.retrieval import FileSignature, Index, IndexConfig, IndexInfo, RetrievalMetadata, RetrievalRequest, RetrievalResponse
+from models.retrieval import FileSignature, Index, IndexInfo, RetrievalMetadata, RetrievalRequest, RetrievalResponse
 from config import PAPERS_DIR, RAG_INDEX_DIR, Config
 
 RAG_QUERY = (
@@ -84,13 +84,7 @@ class RetrievalService:
         )
 
 
-    def retrieve_for_agent(
-        self,
-        paper_path: str,
-        query: str,
-        sections: list[str] | None = None,
-        top_k: int | None = None,
-    ) -> str:
+    def retrieve_for_agent(self, paper_path: str, query: str, sections: list[str] | None = None, top_k: int | None = None) -> str:
         """Retrieve context string for a specific agent (section-aware).
         Used by BM25ContextProvider — returns only the context string.
         """
@@ -105,6 +99,7 @@ class RetrievalService:
 
         retrieved_chunks = self._ranker.retrieve(index_payload, query, top_k_value, sections=sections)
         return self._context_builder.build_context(relative_path, retrieved_chunks)
+
 
     def retrieve_context(self, paper_path: str, top_k: int | None = None, force_reindex: bool = False, query: str | None = None) -> dict[str, Any]:
         """Retrieve context for a given paper path, with optional RAG parameters. Returns context and metadata."""

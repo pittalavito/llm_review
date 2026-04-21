@@ -11,14 +11,16 @@ class AgentLLMConfig(BaseModel):
 
 class GraphAgentConfig(BaseModel):
     agents: list[AgentLLMConfig]
-    
+    max_rounds: int = Field(default=2, ge=1, le=5)
+
     @staticmethod
     def default_config() -> "GraphAgentConfig":
         _DEFAULT_MODEL = LlmModelName.OLLAMA_LLAMA32
         _DEFAULT_TEMPERATURE = 0.1
-        
-        agents: list[AgentLLMConfig] = []
-        for name in list(AgentName):
-            config = AgentLLMConfig(agent_name=name, model=_DEFAULT_MODEL, temperature=_DEFAULT_TEMPERATURE)    
-            agents.append(config)    
-        return GraphAgentConfig(agents=agents) 
+        return GraphAgentConfig(
+            agents=[
+                AgentLLMConfig(agent_name=name, model=_DEFAULT_MODEL, temperature=_DEFAULT_TEMPERATURE)
+                for name in AgentName
+            ],
+            max_rounds=2,
+        ) 

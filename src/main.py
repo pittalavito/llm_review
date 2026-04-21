@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up application lifespan...")
-    app.state.container = Container(config)
+    container = Container(config)
+    container.compile_graph()
+    app.state.container = container
     logger.info("Graph compiled with default config.")
     yield
     logger.info("Shutting down application lifespan...")

@@ -36,3 +36,8 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["test"]
 asyncio_mode = "auto"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
