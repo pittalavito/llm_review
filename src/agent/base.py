@@ -57,13 +57,13 @@ class BaseAgent(ABC, Generic[T]):
         context_block = self._format_context_block(raw_context)
 
         try:
-            logger.info("Invoking chain for agent '%s' with message: %s", self.name, normalized[:50])
+            logger.info("Invoking chain for agent '%s' with message: %s", self.name, normalized[:20])
             result = self._chain.invoke({"message": normalized, "context": context_block})
         except Exception as exc:
             raise AgentValidationError(str(exc)) from exc
 
         payload = self._extract_payload(result)
-        logger.info("Agent '%s' produced response: %s", self.name, str(payload)[:100])
+        logger.info("Agent '%s' produced response: %s", self.name, str(payload)[:20])
         return AgentResponse(
             agent=self.name,
             payload=payload,

@@ -49,17 +49,24 @@ All endpoints are under /dev.
 - PUT /dev/graph-config
 - POST /dev/graph-run
 - POST /dev/graph-run-file
-- GET /dev/openreview/papers/{paper_id}/summary
-- POST /dev/openreview/papers/search
+
 
 ## Run Modes
 
 - Text mode: pass paper text directly to /dev/graph-run.
 - File mode: pass relative paper path (resource/papers) to /dev/graph-run-file, with BM25 retrieval and per-agent query.
 
-## Tooling
+## Scripts
 
-- Run app: ./scripts/run-app.ps1
-- Run tests: ./scripts/run-test.ps1
-- Stop app: ./scripts/stop-app.ps1
-- Clean cache: ./scripts/clean-cache.ps1
+All scripts are cross-platform Python. Run them with `uv run python scripts/<name>.py`.
+
+| Script | Command | Description |
+|---|---|---|
+| start-venv | `uv run python scripts/start-venv.py` | Create `.venv` and install all dependencies |
+| run-app | `uv run python scripts/run-app.py` | Sync deps and start uvicorn on port 8080 |
+| run-test | `uv run python scripts/run-test.py` | Sync dev deps and run pytest |
+| stop-app | `uv run python scripts/stop-app.py` | Kill the running uvicorn process |
+| stop-app (preview) | `uv run python scripts/stop-app.py --preview` | Show which process would be killed |
+| clean-cache | `uv run python scripts/clean-cache.py` | Remove `__pycache__`, `.pytest_cache`, `.pyc/.pyo` |
+| clean-cache (preview) | `uv run python scripts/clean-cache.py --preview` | Show what would be deleted |
+| clean-cache (full) | `uv run python scripts/clean-cache.py --include-venv` | Include `.venv` in cleanup |
