@@ -27,7 +27,7 @@ class GraphService:
         with self._lock:
             self._agents = agents
             
-            state = GraphBuilder.build(self._agents, self._retrieval_service)
+            state = GraphBuilder.build(self._agents)
             self._graph = state.compile()
         
         logger.info("Graph compiled with %d agents, max_rounds=%d", len(graph_agent_config.agents), graph_agent_config.max_rounds)

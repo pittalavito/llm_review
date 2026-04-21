@@ -4,6 +4,10 @@ from models.agent import AgentName, RefinementResponse
 
 class RefinementAgent(BaseAgent):
     AGENT_NAME = AgentName.REFINEMENT_AGENT
+    RAG_SECTIONS = ["results", "conclusion", "discussion"]
+    RAG_QUERY = (
+        "limitations weaknesses revision improvements suggestions discussion conclusion"
+    )
     SYSTEM_PROMPT = (
         "Sei un agente di raffinamento accademico. "
         "Ricevi il paper originale e la meta-review con la decisione dei revisori. "

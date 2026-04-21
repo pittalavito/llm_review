@@ -6,6 +6,7 @@ from langchain_ollama import ChatOllama
 
 from config import Config
 from client.mock_chat import MockChatModel
+from retrieval.bm25_context_provider import BM25ContextProvider
 from models.agent import AgentName, LlmModelName
 from agent.base import BaseAgent
 from agent.impl.contribution_reviewer import ContributionReviewerAgent
@@ -44,15 +45,20 @@ class AgentService:
             self._client_cache[key] = client
             return client
 
-    def init_agent(self, name: AgentName, model: LlmModelName, temperature: float) -> BaseAgent:
+    def init_agent(self, name: AgentName, model: LlmModelName, temperature: float, retrieval_service=None, top_k: int | None = None) -> BaseAgent:
         key = (name, model, self._normalize_temperature(temperature))
         if key in self._agent_cache:
             return self._agent_cache[key]
         with self._cache_lock:
             if key in self._agent_cache:
                 return self._agent_cache[key]
-            client = self.init_client(model, key[2])
-            agent = self.get_agent_class(name)(llm=client)
+            
+            agent_class = self.get_agent_class(name)
+            agent = agent_class(
+                llm=self.init_client(model, key[2]), 
+                context_provider=self._build_context_provider(agent_class, retrieval_service)
+            )
+              
             self._agent_cache[key] = agent
             return agent
 
@@ -110,3 +116,12 @@ class AgentService:
             )
 
         raise ValueError(f"Unsupported LLM model: {model}")
+
+    def _build_context_provider(self, agent_class: type[BaseAgent], retrieval_service) -> BM25ContextProvider | None:
+        if agent_class.RAG_QUERY and retrieval_service:
+            return BM25ContextProvider(
+                retrieval_service=retrieval_service,
+                query=agent_class.RAG_QUERY,
+                sections=agent_class.RAG_SECTIONS,
+            )
+        return None

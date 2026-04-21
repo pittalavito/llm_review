@@ -69,14 +69,14 @@ class Container:
 
 
     def test_agent_with_retrieval(self, name, model, temperature, message: str, paper_path: str, top_k: int | None = None) -> str:
-        """Run an agent using RAG context retrieved from a paper as additional input."""
-        retrieval_service: RetrievalService = self._retrieval_service
+        """Run an agent using RAG context retrieved from a paper — agent drives its own retrieval."""
         agent_service: AgentService = self._agent_service
-
-        retrieval = retrieval_service.retrieve_context(paper_path, top_k=top_k)
-        context: str = retrieval["context"]
-        augmented_message = f"{context}\n\n---\n\n{message}"
-        return agent_service.run_agent(name, model, temperature, augmented_message)
+        agent = agent_service.init_agent(
+            name, model, temperature,
+            retrieval_service=self._retrieval_service,
+            top_k=top_k,
+        )
+        return agent.run(message, paper_path=paper_path)
 
 
     def compile_graph(self, graph_llm_config: GraphAgentConfig):        
@@ -88,8 +88,11 @@ class Container:
             
         agents = {}
         for conf in graph_llm_config.agents:
-            angent = agent_service.init_agent(conf.agent_name, conf.model, conf.temperature)
-            agents[conf.agent_name] = angent
+            agent = agent_service.init_agent(
+                conf.agent_name, conf.model, conf.temperature,
+                retrieval_service=self._retrieval_service,
+            )
+            agents[conf.agent_name] = agent
         
         graph_service.compile(graph_llm_config, agents) 
     

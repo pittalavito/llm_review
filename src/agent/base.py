@@ -8,6 +8,7 @@ from langchain_core.runnables import Runnable
 from pydantic import BaseModel
 
 from models.agent import AgentName, AgentResponse
+from retrieval.protocols import ContextProvider
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +25,15 @@ class BaseAgent(ABC):
     RESPONSE_SCHEMA: type[BaseModel] | None = None
     MESSAGE_LABEL: str = "Message"
     RAG_QUERY: str = ""
+    RAG_SECTIONS: list[str] = []
 
-    def __init__(self, llm: BaseChatModel):
+    def __init__(self, llm: BaseChatModel, context_provider: ContextProvider | None = None):
         self.llm = llm
         self.name = self.AGENT_NAME
+        self._context_provider = context_provider
         self._prompt = ChatPromptTemplate.from_messages([
             ("system", self.SYSTEM_PROMPT),
-            ("human", "{message}"),
+            ("human", "{context}{message}"),
         ])
         self._chain: Runnable = self._build_chain(llm)
 
@@ -39,15 +42,21 @@ class BaseAgent(ABC):
             return self._prompt | llm.with_structured_output(self.RESPONSE_SCHEMA)
         return self._prompt | llm
 
-    def run(self, message: str) -> str:
+    def run(self, message: str, paper_path: str | None = None) -> str:
         normalized = message.strip()
         if not normalized:
             raise ValueError("Message must not be empty.")
 
-        logger.info("Running agent '%s'", self.name)
+        logger.info("Running agent '%s' (paper_path=%s)", self.name, paper_path)
+
+        context_block = ""
+        if paper_path and self._context_provider:
+            raw_context = self._context_provider.get_context(paper_path)
+            if raw_context:
+                context_block = f"RETRIEVED CONTEXT:\n{raw_context}\n\n---\n\n"
 
         try:
-            result = self._chain.invoke({"message": normalized})
+            result = self._chain.invoke({"message": normalized, "context": context_block})
         except Exception as exc:
             raise AgentValidationError(str(exc)) from exc
 
@@ -59,9 +68,10 @@ class BaseAgent(ABC):
         envelope = AgentResponse(agent=self.name, payload=payload)
         return envelope.model_dump_json(ensure_ascii=False)
 
-    def get_prompt_preview(self, message: str) -> str:
+    def get_prompt_preview(self, message: str, context: str = "") -> str:
         """Format the actual messages sent to the LLM (for UI preview)."""
-        messages = self._prompt.format_messages(message=message)
+        context_block = f"RETRIEVED CONTEXT:\n{context}\n\n---\n\n" if context else ""
+        messages = self._prompt.format_messages(message=message, context=context_block)
         parts = []
         for msg in messages:
             role = msg.__class__.__name__.replace("Message", "").upper()

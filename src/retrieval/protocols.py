@@ -1,14 +1,10 @@
 from typing import Protocol
 
 
-class RetrievalContextProvider(Protocol):
-    """Interfaccia minimale richiesta dal domain per il recupero del contesto RAG."""
+class ContextProvider(Protocol):
+    """Interfaccia minima per il recupero del contesto RAG da parte degli agenti.
+    L'agente non sa cosa c'è dietro — BM25, embedding, full text, mock.
+    """
 
-    def retrieve_context(
-        self,
-        paper_path: str,
-        top_k: int | None,
-        force_reindex: bool,
-        query: str | None,
-    ) -> dict:
+    def get_context(self, paper_path: str) -> str:
         ...

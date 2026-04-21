@@ -4,6 +4,7 @@ from models.agent import AgentName, ContributionReviewResponse
 
 class ContributionReviewerAgent(BaseAgent):
     AGENT_NAME = AgentName.CONTRIBUTION_REVIEWER
+    RAG_SECTIONS = ["abstract", "introduction", "related_work"]
     RAG_QUERY = (
         "novelty originality contribution innovation state of the art prior work "
         "comparison limitations future work impact significance"

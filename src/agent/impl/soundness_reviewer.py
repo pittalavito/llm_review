@@ -1,9 +1,9 @@
-
 from agent.base import BaseAgent
 from models.agent import AgentName, SoundnessReviewResponse
 
 class SoundnessReviewerAgent(BaseAgent):
     AGENT_NAME = AgentName.SOUNDNESS_REVIEWER
+    RAG_SECTIONS = ["methods", "experiments", "results"]
     RAG_QUERY = (
         "experimental design methodology statistical analysis validity threats "
         "reproducibility datasets baselines evaluation metrics ablation study"

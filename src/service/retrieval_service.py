@@ -84,6 +84,28 @@ class RetrievalService:
         )
 
 
+    def retrieve_for_agent(
+        self,
+        paper_path: str,
+        query: str,
+        sections: list[str] | None = None,
+        top_k: int | None = None,
+    ) -> str:
+        """Retrieve context string for a specific agent (section-aware).
+        Used by BM25ContextProvider — returns only the context string.
+        """
+        resolved_path, relative_path = self._file_adapter.resolve_paper_path(paper_path)
+        doc_id = self._index_repository.compute_doc_id(relative_path)
+        top_k_value = top_k or self.config.rag_top_k_default
+        file_signature = self._file_adapter.build_file_signature(resolved_path)
+
+        index_payload = self._index_repository.load(doc_id)
+        if not self._is_index_valid(index_payload, relative_path, file_signature):
+            index_payload = self._build_index(resolved_path, relative_path, doc_id, file_signature)
+
+        retrieved_chunks = self._ranker.retrieve(index_payload, query, top_k_value, sections=sections)
+        return self._context_builder.build_context(relative_path, retrieved_chunks)
+
     def retrieve_context(self, paper_path: str, top_k: int | None = None, force_reindex: bool = False, query: str | None = None) -> dict[str, Any]:
         """Retrieve context for a given paper path, with optional RAG parameters. Returns context and metadata."""
         request = RetrievalRequest(paper_path=paper_path, top_k=top_k, force_reindex=force_reindex, query=query)

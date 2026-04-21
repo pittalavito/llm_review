@@ -4,6 +4,7 @@ from models.agent import AgentName, PresentationReviewResponse
 
 class PresentationReviewerAgent(BaseAgent):
     AGENT_NAME = AgentName.PRESENTATION_REVIEWER
+    RAG_SECTIONS = []  # tutto il documento — valuta struttura globale
     RAG_QUERY = (
         "abstract introduction related work background figures tables notation "
         "clarity writing structure organization conclusion"
