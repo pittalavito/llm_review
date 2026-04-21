@@ -7,6 +7,10 @@ from models.controller import GraphRunRequest, IndexPaperRequest, PreviewPromptR
 from models.agent import AgentName, LlmModelName, AgentResponse
 
 PREFIX = "/dev"
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix=PREFIX, tags=["dev"])
+
 URL_HEALTH = "/health"
 URL_MODELS = "/models"
 URL_TEST_MODEL = "/test-llm"
@@ -22,10 +26,6 @@ URL_GRAPH_CONFIG = "/graph/config"
 URL_GRAPH_RUN = "/graph/run"
 URL_RUNS = "/runs"
 URL_RUN_DETAIL = "/runs/{run_id}"
-
-
-logger = logging.getLogger(__name__)
-router = APIRouter(prefix=PREFIX, tags=["dev"])
 
 
 @router.get(URL_HEALTH, response_model=dict)

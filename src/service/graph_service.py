@@ -12,7 +12,10 @@ from graph.state import ReviewState
 from service.retrieval_service import RetrievalService
 from graph.result_repository import ResultRepository
 
+
 logger = logging.getLogger(__name__)
+
+_LOGGER_PREFIX = "[GraphService]"
 
 
 class GraphService:
@@ -31,12 +34,12 @@ class GraphService:
             self._graph_config = graph_config
             self._graph = GraphBuilder.build(agents).compile()
         
-        logger.info("Graph compiled — agents=%d max_rounds=%d", len(agents), graph_config.max_rounds)
+        logger.info(f"{_LOGGER_PREFIX} Graph compiled — agents={len(agents)} max_rounds={graph_config.max_rounds}")
 
 
     def invoke(self, paper_path: str, force_reindex: bool = False) -> tuple[dict, dict]:
         if self._graph is None or self._graph_config is None:
-            raise RuntimeError("Graph not compiled. Call compile_graph() first.")
+            raise RuntimeError(f"{_LOGGER_PREFIX} Graph not compiled. Call compile_graph() first.")
 
         metadata = self._retrieval_service.index_paper(paper_path, force_reindex=force_reindex)
         relative_path = metadata.paper_path
@@ -95,4 +98,4 @@ class GraphService:
             )
             self._result_repository.save(record)
         except Exception:
-            logger.exception("Failed to save run record for paper: %s", paper_path)
+            logger.exception(f"{_LOGGER_PREFIX} Failed to save run record for paper: {paper_path}")

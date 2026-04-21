@@ -22,6 +22,7 @@ from agent.impl.soundness_reviewer import SoundnessReviewerAgent
 
 logger = logging.getLogger(__name__)
 
+_LOGGER_PREFIX = "[AgentService]"
 
 _REGISTRY: dict[AgentName, type[BaseAgent]] = {
     AgentName.SOUNDNESS_REVIEWER: SoundnessReviewerAgent,
@@ -44,9 +45,11 @@ class AgentService:
     def init_client(self, model: LlmModelName, temperature: float) -> BaseChatModel:
         key = (model, self._normalize_temperature(temperature))
         if key in self._client_cache:
+            logger.info(f"{_LOGGER_PREFIX} Client cache hit for model={model}, temperature={temperature}")
             return self._client_cache[key]
         with self._cache_lock:
             if key in self._client_cache:
+                logger.info(f"{_LOGGER_PREFIX} Client cache hit for model={model}, temperature={temperature}")
                 return self._client_cache[key]
             client = self._create_client(model, key[1], self.config)
             self._client_cache[key] = client
@@ -56,9 +59,11 @@ class AgentService:
     def init_agent(self, name: AgentName, model: LlmModelName, temperature: float, retrieval_service=None, top_k: int | None = None) -> BaseAgent:
         key = (name, model, self._normalize_temperature(temperature))
         if key in self._agent_cache:
+            logger.info(f"{_LOGGER_PREFIX} Agent cache hit for name={name}, model={model}, temperature={temperature}")
             return self._agent_cache[key]
         with self._cache_lock:
             if key in self._agent_cache:
+                logger.info(f"{_LOGGER_PREFIX} Agent cache hit for name={name}, model={model}, temperature={temperature}")
                 return self._agent_cache[key]
             client = self.init_client(model, temperature)
             context_provider = self._build_context_provider(self.get_agent_class(name), retrieval_service)  
@@ -105,7 +110,7 @@ class AgentService:
             return MockChatModel()
 
         if model.is_ollama():
-            logger.info(f"Initializing Ollama client with model={model}, temperature={temperature}")
+            logger.info(f"{_LOGGER_PREFIX} Initializing Ollama client with model={model}, temperature={temperature}")
             return ChatOllama(
                 model=model,
                 base_url=config.ollama_url,
@@ -117,7 +122,7 @@ class AgentService:
         if model.is_openai():
             if not config.openai_api_key:
                 raise ValueError("OPENAI_API_KEY not configured.")
-            logger.info(f"Initializing OpenAI client with model={model}, temperature={temperature}")
+            logger.info(f"{_LOGGER_PREFIX} Initializing OpenAI client with model={model}, temperature={temperature}")
             return ChatOpenAI(
                 model=model,
                 api_key=config.openai_api_key,
@@ -127,7 +132,7 @@ class AgentService:
         if model.is_anthropic():
             if not config.anthropic_api_key:
                 raise ValueError("ANTHROPIC_API_KEY not configured.")
-            logger.info(f"Initializing Anthropic client with model={model}, temperature={temperature}")
+            logger.info(f"{_LOGGER_PREFIX} Initializing Anthropic client with model={model}, temperature={temperature}")
             return ChatAnthropic(
                 model=model,
                 api_key=config.anthropic_api_key,
@@ -139,11 +144,11 @@ class AgentService:
 
     def _build_context_provider(self, agent_class: type[BaseAgent], retrieval_service) -> RetrievalContextProvider | None:
         if agent_class.RAG_QUERY and retrieval_service:
-            logger.info(f"Building RetrievalContextProvider for agent_class={agent_class.__name__}")
+            logger.info(f"{_LOGGER_PREFIX} Building RetrievalContextProvider for agent_class={agent_class.__name__}")
             return RetrievalContextProvider(
                 retrieval_service=retrieval_service,
                 query=agent_class.RAG_QUERY,
                 sections=agent_class.RAG_SECTIONS,
             )
-        logger.info(f"No context provider needed for agent_class={agent_class.__name__}")
+        logger.info(f"{_LOGGER_PREFIX} No context provider needed for agent_class={agent_class.__name__}")
         return None

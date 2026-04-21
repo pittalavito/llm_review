@@ -2,18 +2,19 @@ import json
 import logging
 
 from abc import ABC
-from typing import Generic, TypeVar
+from typing import Generic
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel
-
 from models.agent import AgentName, AgentResponse, RawResponse, T
 from models.protocols import ContextProvider
 
 logger = logging.getLogger(__name__)
 
+
+_LOGGER_PREFIX = "[BaseAgent]"
 _CONTEXT_HEADER = "RETRIEVED CONTEXT:"
 _CONTEXT_SEPARATOR = "\n\n---\n\n"
 _PROMPT_SEPARATOR = "\n\n---\n\n"
@@ -51,19 +52,19 @@ class BaseAgent(ABC, Generic[T]):
         if not normalized:
             raise ValueError("Message must not be empty.")
 
-        logger.info("Running agent '%s' (paper_path=%s)", self.name, paper_path)
+        logger.info(f"{_LOGGER_PREFIX} Running agent '{self.name}' with message: {normalized[:20]} (paper_path={paper_path})")
 
         raw_context = self._get_raw_context(paper_path)
         context_block = self._format_context_block(raw_context)
 
         try:
-            logger.info("Invoking chain for agent '%s' with message: %s", self.name, normalized[:20])
+            logger.info(f"{_LOGGER_PREFIX} Invoking chain for agent '{self.name}' with message: {normalized[:20]} and context length: {len(context_block)}")
             result = self._chain.invoke({"message": normalized, "context": context_block})
         except Exception as exc:
             raise AgentValidationError(str(exc)) from exc
 
         payload = self._extract_payload(result)
-        logger.info("Agent '%s' produced response: %s", self.name, str(payload)[:20])
+        logger.info(f"{_LOGGER_PREFIX} Agent '{self.name}' produced raw result: {str(result)[:20]}")        
         return AgentResponse(
             agent=self.name,
             payload=payload,
