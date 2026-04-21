@@ -11,16 +11,32 @@ from pypdf.constants import StrEnum
 
 class LlmModelName(StrEnum):
     MOCK = "mock"
+    # Ollama (local)
     OLLAMA_TINYLLAMA = "tinyllama:1.1b"
     OLLAMA_LLAMA32 = "llama3.2:3b"
     OLLAMA_GROQ_TOOL_USE = "llama3-groq-tool-use"
-    OLLAMA_GEMMA_4 = "gemma4"
-
-    def is_ollama(self) -> bool:
-        return self in {self.OLLAMA_TINYLLAMA, self.OLLAMA_LLAMA32, self.OLLAMA_GROQ_TOOL_USE, self.OLLAMA_GEMMA_4}
+    OLLAMA_GEMMA_4 = "gemma3:4b"
+    # OpenAI
+    OPENAI_GPT4O = "gpt-4o"
+    OPENAI_GPT4O_MINI = "gpt-4o-mini"
+    # Anthropic
+    ANTHROPIC_CLAUDE_SONNET = "claude-sonnet-4-6"
+    ANTHROPIC_CLAUDE_HAIKU = "claude-haiku-4-5-20251001"
 
     def is_mock(self) -> bool:
         return self == self.MOCK
+
+    def is_ollama(self) -> bool:
+        return self in {
+            self.OLLAMA_TINYLLAMA, self.OLLAMA_LLAMA32,
+            self.OLLAMA_GROQ_TOOL_USE, self.OLLAMA_GEMMA_4,
+        }
+
+    def is_openai(self) -> bool:
+        return self in {self.OPENAI_GPT4O, self.OPENAI_GPT4O_MINI}
+
+    def is_anthropic(self) -> bool:
+        return self in {self.ANTHROPIC_CLAUDE_SONNET, self.ANTHROPIC_CLAUDE_HAIKU}
 
 
 #########################################################

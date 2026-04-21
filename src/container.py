@@ -1,6 +1,5 @@
 from fastapi import Request
 from agent.base import BaseAgent
-from agent.builder import PromptBuilder
 from config import Config
 from graph.config import GraphAgentConfig
 from service.graph_service import GraphService
@@ -31,13 +30,10 @@ class Container:
     
     # il FE non lo mostra bene 
     def build_agent_prompt(self, name, message) -> str:
-        """Build the full prompt for a given agent name and user message."""
-        agent_class: BaseAgent = AgentService.get_agent_class(name)
-        
-        system_prompt = agent_class.SYSTEM_PROMPT
-        schema = agent_class.RESPONSE_SCHEMA
-        message_label = agent_class.MESSAGE_LABEL
-        return PromptBuilder.build_prompt(system_prompt, schema, message, message_label)    
+        """Build the full prompt for a given agent name and user message (UI preview only)."""
+        agent_class = AgentService.get_agent_class(name)
+        agent_instance = agent_class.__new__(agent_class)
+        return agent_instance.get_prompt_preview(message)    
     
     
     def test_agent(self, name, model, temperature, message) -> str:

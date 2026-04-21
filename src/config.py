@@ -32,8 +32,14 @@ class Config(BaseSettings):
 
     # --- Ollama ---
     ollama_url: str = "http://localhost:11434"
-    ollama_num_predict: int = 256
+    ollama_num_predict: int = 2048
     ollama_keep_alive: str = "10m"
+
+    # --- OpenAI ---
+    openai_api_key: str | None = None
+
+    # --- Anthropic ---
+    anthropic_api_key: str | None = None
 
     # --- Retrieval ---
     rag_chunk_size: int = 800
