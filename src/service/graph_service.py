@@ -50,6 +50,11 @@ class GraphService:
         return result, retrieval_metadata
 
 
+    def get_graph_config(self) -> dict | None:
+        if self._graph_config is None:
+            return None
+        return self._graph_config.model_dump()
+
     def list_runs(self):
         return self._result_repo.list()
 

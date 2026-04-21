@@ -141,6 +141,7 @@ function renderDetail(container, record) {
       <span class="badge ${badge.cls}">${badge.label}</span>
       <span class="sto-detail-meta">${ts} · ${record.paper_path} · ${record.total_rounds} round${record.total_rounds !== 1 ? 's' : ''}</span>
     </div>
+    ${renderGraphConfig(record.graph_config)}
     ${roundsHtml}
     ${record.revision_notes ? renderRevisionNotes(record.revision_notes) : ''}
   `;
@@ -148,6 +149,28 @@ function renderDetail(container, record) {
   container.querySelector('#sto-back-btn').addEventListener('click', () => {
     container.hidden = true;
   });
+}
+
+function renderGraphConfig(config) {
+  if (!config) return '';
+  const agents  = config.agents || [];
+  const maxRounds = config.max_rounds ?? '?';
+  const rows = agents.map(a => `
+    <tr>
+      <td>${AGENT_LABELS[a.agent_name] || a.agent_name}</td>
+      <td><code>${a.model}</code></td>
+      <td>${a.temperature}</td>
+    </tr>
+  `).join('');
+  return `
+    <details class="sto-config-block">
+      <summary class="sto-config-summary">⚙️ Configurazione agenti · max rounds: ${maxRounds}</summary>
+      <table class="sto-config-table">
+        <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </details>
+  `;
 }
 
 function renderRound(round, agentRuns) {

@@ -18,6 +18,7 @@ URL_PAPERS_INDEX = "/papers/index"
 URL_PAPERS_INDEXED = "/papers/indexed"
 URL_PAPERS_INDEXED_DETAIL = "/papers/indexed/detail"
 URL_GRAPH_COMPILE = "/graph/compile"
+URL_GRAPH_CONFIG = "/graph/config"
 URL_GRAPH_RUN = "/graph/run"
 URL_RUNS = "/runs"
 URL_RUN_DETAIL = "/runs/{run_id}"
@@ -157,6 +158,12 @@ def compile_graph(body: GraphAgentConfig | None = None, container: Container = D
     except Exception as exc:
         logger.exception("Graph compilation failed")
         raise HTTPException(status_code=500, detail=f"Graph compile error: {exc}") from exc
+
+
+@router.get(URL_GRAPH_CONFIG)
+def get_graph_config(container: Container = Depends(inject_container)) -> dict | None:
+    """Return the currently compiled graph configuration."""
+    return container.get_graph_config()
 
 
 @router.post(URL_GRAPH_RUN)

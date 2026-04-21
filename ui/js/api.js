@@ -159,6 +159,16 @@ export async function getIndexedPaperDetail(paperPath) {
  * @param {object|null} graphConfig
  * @returns {Promise<{ status: string }>}
  */
+/**
+ * GET /dev/graph/config
+ * @returns {Promise<object|null>}
+ */
+export async function getGraphConfig() {
+  const res = await fetch(`${BASE_URL}/graph/config`);
+  await throwForResponse(res);
+  return res.json();
+}
+
 export async function compileGraph(graphConfig = null) {
   const res = await fetch(`${BASE_URL}/graph/compile`, {
     method: 'POST',
