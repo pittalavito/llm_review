@@ -1,7 +1,7 @@
 from agent.base import BaseAgent
 from models.agent import AgentName, SoundnessReviewResponse
 
-class SoundnessReviewerAgent(BaseAgent):
+class SoundnessReviewerAgent(BaseAgent[SoundnessReviewResponse]):
     AGENT_NAME = AgentName.SOUNDNESS_REVIEWER
     RAG_SECTIONS = ["methods", "experiments", "results"]
     RAG_QUERY = (

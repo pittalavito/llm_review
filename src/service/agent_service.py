@@ -6,8 +6,9 @@ from langchain_ollama import ChatOllama
 
 from config import Config
 from client.mock_chat import MockChatModel
+from graph.config import GraphAgentConfig
 from retrieval.bm25_context_provider import BM25ContextProvider
-from models.agent import AgentName, LlmModelName
+from models.agent import AgentName, AgentResponse, LlmModelName
 from agent.base import BaseAgent
 from agent.impl.contribution_reviewer import ContributionReviewerAgent
 from agent.impl.meta_reviewer import MetaReviewerAgent
@@ -34,6 +35,7 @@ class AgentService:
         self._client_cache: dict[tuple[LlmModelName, float], BaseChatModel] = {}
         self._agent_cache: dict[tuple[AgentName, LlmModelName, float], BaseAgent] = {}
 
+
     def init_client(self, model: LlmModelName, temperature: float) -> BaseChatModel:
         key = (model, self._normalize_temperature(temperature))
         if key in self._client_cache:
@@ -45,6 +47,7 @@ class AgentService:
             self._client_cache[key] = client
             return client
 
+
     def init_agent(self, name: AgentName, model: LlmModelName, temperature: float, retrieval_service=None, top_k: int | None = None) -> BaseAgent:
         key = (name, model, self._normalize_temperature(temperature))
         if key in self._agent_cache:
@@ -52,23 +55,31 @@ class AgentService:
         with self._cache_lock:
             if key in self._agent_cache:
                 return self._agent_cache[key]
-            
+            client = self.init_client(model, temperature)
+            context_provider = self._build_context_provider(self.get_agent_class(name), retrieval_service)  
             agent_class = self.get_agent_class(name)
-            agent = agent_class(
-                llm=self.init_client(model, key[2]), 
-                context_provider=self._build_context_provider(agent_class, retrieval_service)
-            )
-              
+            agent = agent_class(llm=client, context_provider=context_provider,)
             self._agent_cache[key] = agent
             return agent
+
+
+    def init_agents_from_graph_config(self, agents_config: GraphAgentConfig, retrieval_service=None) -> dict[AgentName, BaseAgent]:
+        agents = {}
+        for a in agents_config.agents:
+            agent = self.init_agent(a.agent_name, a.model, a.temperature, retrieval_service)
+            agents[a.agent_name] = agent
+        return agents    
+
 
     def invoke_client(self, model: LlmModelName, temperature: float, message: str) -> str:
         client = self.init_client(model, temperature)
         return client.invoke(message).content
 
-    def run_agent(self, name: AgentName, model: LlmModelName, temperature: float, message: str) -> str:
+
+    def run_agent(self, name: AgentName, model: LlmModelName, temperature: float, message: str) -> AgentResponse:
         agent = self.init_agent(name, model, temperature)
         return agent.run(message)
+
 
     @staticmethod
     def get_agent_class(name: AgentName) -> type[BaseAgent]:
@@ -77,9 +88,11 @@ class AgentService:
             raise ValueError(f"Unsupported agent name: {name}")
         return agent_class
 
+
     @staticmethod
     def _normalize_temperature(temperature: float) -> float:
         return round(float(temperature), 3)
+
 
     @staticmethod
     def _create_client(model: LlmModelName, temperature: float, config: Config) -> BaseChatModel:
@@ -116,6 +129,7 @@ class AgentService:
             )
 
         raise ValueError(f"Unsupported LLM model: {model}")
+
 
     def _build_context_provider(self, agent_class: type[BaseAgent], retrieval_service) -> BM25ContextProvider | None:
         if agent_class.RAG_QUERY and retrieval_service:

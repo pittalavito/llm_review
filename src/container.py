@@ -1,5 +1,4 @@
 from fastapi import Request
-from agent.base import BaseAgent
 from config import Config
 from graph.config import GraphAgentConfig
 from service.graph_service import GraphService
@@ -28,18 +27,16 @@ class Container:
         agent_service: AgentService = self._agent_service
         return agent_service.invoke_client(model, temperature, message)
     
-    # il FE non lo mostra bene 
-    def build_agent_prompt(self, name, message) -> str:
-        """Build the full prompt for a given agent name and user message (UI preview only)."""
+    
+    def build_agent_prompt(self, name, message) -> dict:
+        """Build prompt preview for a given agent — no LLM instantiation needed."""
         agent_class = AgentService.get_agent_class(name)
-        agent_instance = agent_class.__new__(agent_class)
-        return agent_instance.get_prompt_preview(message)    
+        return agent_class.build_preview(message)    
     
     
-    def test_agent(self, name, model, temperature, message) -> str:
+    def test_agent(self, name, model, temperature, message):
         """Test agent response for given agent name, model, temperature and message."""
-        agent_service: AgentService = self._agent_service
-        return agent_service.run_agent(name, model, temperature, message)
+        return self._agent_service.run_agent(name, model, temperature, message)
     
     
     def list_papers_path(self) -> list[str]:
@@ -68,33 +65,17 @@ class Container:
         return info.model_dump()
 
 
-    def test_agent_with_retrieval(self, name, model, temperature, message: str, paper_path: str, top_k: int | None = None) -> str:
+    def test_agent_with_retrieval(self, name, model, temperature, message: str, paper_path: str, top_k: int | None = None):
         """Run an agent using RAG context retrieved from a paper — agent drives its own retrieval."""
-        agent_service: AgentService = self._agent_service
-        agent = agent_service.init_agent(
-            name, model, temperature,
-            retrieval_service=self._retrieval_service,
-            top_k=top_k,
-        )
+        agent = self._agent_service.init_agent(name, model, temperature, self._retrieval_service, top_k=top_k)
         return agent.run(message, paper_path=paper_path)
 
 
-    def compile_graph(self, graph_llm_config: GraphAgentConfig):        
+    def compile_graph(self, agents_config: GraphAgentConfig = GraphAgentConfig.default_config()):        
         agent_service: AgentService = self._agent_service
-        graph_service: GraphService = self._graph_service
-
-        if graph_llm_config is None:
-            graph_llm_config = GraphAgentConfig.default_config()           
-            
-        agents = {}
-        for conf in graph_llm_config.agents:
-            agent = agent_service.init_agent(
-                conf.agent_name, conf.model, conf.temperature,
-                retrieval_service=self._retrieval_service,
-            )
-            agents[conf.agent_name] = agent
-        
-        graph_service.compile(graph_llm_config, agents) 
+        graph_service: GraphService = self._graph_service         
+        agents = agent_service.init_agents_from_graph_config(agents_config, self._retrieval_service)
+        graph_service.compile(agents) 
     
     
     def invoke_graph(self, input_data):

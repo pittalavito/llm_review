@@ -1,8 +1,10 @@
 import json
 
-from typing import Any
+from typing import Any, Generic, TypeVar
 from pydantic import BaseModel, Field
 from pypdf.constants import StrEnum
+
+T = TypeVar("T", bound=BaseModel)
 
 
 ##########################################################
@@ -55,20 +57,20 @@ class AgentName(StrEnum):
 ### AGENT STRUCTURED OUTPUT MODEL ########################
 ##########################################################
 
-class AgentResponse(BaseModel):
-    agent: AgentName
-    payload: dict[str, Any] = Field(default_factory=dict)
+class RawResponse(BaseModel):
+    """Fallback payload per agenti senza schema strutturato."""
+    response: str
 
-    @classmethod
-    def from_raw(cls, raw: str) -> "AgentResponse":
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"Agent returned invalid JSON: {exc}") from exc
-        try:
-            return cls.model_validate(data)
-        except Exception as exc:
-            raise ValueError(f"Agent output does not match schema: {exc}") from exc
+
+class AgentResponse(BaseModel, Generic[T]):
+    agent: AgentName
+    payload: T
+
+    def to_json(self) -> str:
+        return self.model_dump_json(ensure_ascii=False)
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.model_dump()
 
 
 ##########################################################

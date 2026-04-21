@@ -2,7 +2,7 @@
 from agent.base import BaseAgent
 from models.agent import AgentName, PresentationReviewResponse 
 
-class PresentationReviewerAgent(BaseAgent):
+class PresentationReviewerAgent(BaseAgent[PresentationReviewResponse]):
     AGENT_NAME = AgentName.PRESENTATION_REVIEWER
     RAG_SECTIONS = []  # tutto il documento — valuta struttura globale
     RAG_QUERY = (

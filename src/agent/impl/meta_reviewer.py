@@ -2,7 +2,7 @@
 from agent.base import BaseAgent
 from models.agent import AgentName, MetaReviewResponse
 
-class MetaReviewerAgent(BaseAgent):
+class MetaReviewerAgent(BaseAgent[MetaReviewResponse]):
     AGENT_NAME = AgentName.META_REVIEWER
     SYSTEM_PROMPT = (
         "Sei un meta-revisore accademico. "

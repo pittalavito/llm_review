@@ -2,7 +2,7 @@
 from agent.base import BaseAgent
 from models.agent import AgentName, ContributionReviewResponse
 
-class ContributionReviewerAgent(BaseAgent):
+class ContributionReviewerAgent(BaseAgent[ContributionReviewResponse]):
     AGENT_NAME = AgentName.CONTRIBUTION_REVIEWER
     RAG_SECTIONS = ["abstract", "introduction", "related_work"]
     RAG_QUERY = (

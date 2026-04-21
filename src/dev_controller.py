@@ -86,12 +86,11 @@ def get_indexed_paper(paper_path: str, container: Container = Depends(inject_con
         raise HTTPException(status_code=500, detail=f"Error: {exc}") from exc
 
 
-@router.post(URL_AGENTS, response_model=AgentResponse)
-def test_agent(body: TestAgentRequest, container: Container = Depends(inject_container)) -> AgentResponse:
+@router.post(URL_AGENTS)
+def test_agent(body: TestAgentRequest, container: Container = Depends(inject_container)):
     """Test agent response for given agent name, model, temperature and message."""
     try:
-        raw_result = container.test_agent(body.name, body.model, body.temperature, body.message)
-        return AgentResponse.from_raw(raw_result)
+        return container.test_agent(body.name, body.model, body.temperature, body.message)
     except ValueError as exc:
         logger.exception("Agent validation failed for agent '%s'", body.name)
         raise HTTPException(status_code=400, detail=f"Agent error: {exc}") from exc
@@ -101,7 +100,7 @@ def test_agent(body: TestAgentRequest, container: Container = Depends(inject_con
     
 
 @router.post(URL_AGENT_PROMPT_PREVIEW)
-def agent_prompt_preview(body: PreviewPromptRequest, container: Container = Depends(inject_container)) -> str:
+def agent_prompt_preview(body: PreviewPromptRequest, container: Container = Depends(inject_container)) -> dict:
     try:
         return container.build_agent_prompt(body.name, body.message)
     except Exception as exc:
@@ -109,14 +108,13 @@ def agent_prompt_preview(body: PreviewPromptRequest, container: Container = Depe
         raise HTTPException(status_code=500, detail=f"Error: {exc}") from exc
 
 
-@router.post(URL_AGENTS_WITH_RETRIEVAL, response_model=AgentResponse)
-def test_agent_with_retrieval(body: TestAgentWithRetrievalRequest, container: Container = Depends(inject_container)) -> AgentResponse:
+@router.post(URL_AGENTS_WITH_RETRIEVAL)
+def test_agent_with_retrieval(body: TestAgentWithRetrievalRequest, container: Container = Depends(inject_container)):
     """Run an agent with RAG context retrieved from a paper injected into the message."""
     try:
-        raw_result = container.test_agent_with_retrieval(
+        return container.test_agent_with_retrieval(
             body.name, body.model, body.temperature, body.message, body.paper_path, body.top_k
         )
-        return AgentResponse.from_raw(raw_result)
     except ValueError as exc:
         logger.exception("Agent-with-retrieval validation failed for agent '%s'", body.name)
         raise HTTPException(status_code=400, detail=f"Agent error: {exc}") from exc

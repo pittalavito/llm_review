@@ -51,31 +51,30 @@ class GraphBuilder:
 
     @staticmethod
     def _reviewer_node(agent: BaseAgent):
-        """Reviewer node: agent retrieves its own RAG context via ContextProvider."""
-
         def node(state: ReviewState) -> dict:
             paper_path = state.get("paper_path")
             message = "Analizza il paper e fornisci una review strutturata."
             revision_notes = state.get("revision_notes")
             if revision_notes:
                 message += f"\n\nNote di revisione dal round precedente:\n{revision_notes}"
-            review = agent.run(message, paper_path=paper_path)
-            return {"reviews": [review]}
+
+            response = agent.run(message, paper_path=paper_path)
+            return {"reviews": [response.to_json()]}
 
         return node
 
     @staticmethod
     def _meta_node(agent: BaseAgent):
-        """Meta-reviewer node: aggregates last 3 reviews — no RAG needed."""
-
         def node(state: ReviewState) -> dict:
             current_reviews = [json.loads(r) for r in state["reviews"][-3:]]
             reviews_text = json.dumps(current_reviews, ensure_ascii=False, indent=2)
-            raw = agent.run(reviews_text)
-            payload = json.loads(raw).get("payload", {})
+
+            response = agent.run(reviews_text)
+            payload = response.payload  # MetaReviewResponse — typed
+
             return {
-                "meta_review": payload,
-                "decision": payload.get("decision"),
+                "meta_review": payload.model_dump(),
+                "decision": payload.decision,
                 "current_round": state["current_round"] + 1,
             }
 
@@ -83,15 +82,15 @@ class GraphBuilder:
 
     @staticmethod
     def _refinement_node(agent: BaseAgent):
-        """Refinement node: agent retrieves section context + receives meta-review."""
-
         def node(state: ReviewState) -> dict:
             paper_path = state.get("paper_path")
             meta_review = json.dumps(state.get("meta_review") or {}, ensure_ascii=False, indent=2)
             message = f"Meta-review ricevuta:\n{meta_review}"
-            raw = agent.run(message, paper_path=paper_path)
-            payload = json.loads(raw).get("payload", {})
-            return {"revision_notes": payload.get("revision_summary", "")}
+
+            response = agent.run(message, paper_path=paper_path)
+            payload = response.payload  # RefinementResponse — typed
+
+            return {"revision_notes": payload.revision_summary}
 
         return node
 

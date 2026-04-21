@@ -2,7 +2,7 @@
 from agent.base import BaseAgent
 from models.agent import AgentName, RefinementResponse
 
-class RefinementAgent(BaseAgent):
+class RefinementAgent(BaseAgent[RefinementResponse]):
     AGENT_NAME = AgentName.REFINEMENT_AGENT
     RAG_SECTIONS = ["results", "conclusion", "discussion"]
     RAG_QUERY = (
