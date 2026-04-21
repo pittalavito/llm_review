@@ -5,12 +5,16 @@ from container import Container
 from dev_controller import router as dev_router
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from uvicorn.logging import DefaultFormatter
 from config import Config, UI_DIR
 
 # 1. Configure logging and load configuration
 config = Config()
 log_level = getattr(logging, config.app_log_level.upper(), logging.INFO)
-logging.basicConfig(level=log_level, format="[%(levelname)s]: %(message)s")
+_handler = logging.StreamHandler()
+_handler.setFormatter(DefaultFormatter("%(levelprefix)s %(message)s", use_colors=True))
+logging.root.setLevel(log_level)
+logging.root.handlers = [_handler]
 logger = logging.getLogger(__name__)
 
 # 2. Application lifespan management
