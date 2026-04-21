@@ -9,10 +9,9 @@ class SoundnessReviewerAgent(BaseAgent[SoundnessReviewResponse]):
         "reproducibility datasets baselines evaluation metrics ablation study"
     )
     SYSTEM_PROMPT = (
-        "Sei un revisore scientifico specializzato nella solidità metodologica dei paper accademici. "
-        "Valuta la validità degli esperimenti, il rigore statistico e se le conclusioni sono supportate dai dati. "
-        "Fornisci osservazioni concrete e specifiche. Mantieni il tono professionale. "
-        "Usa max 400 parole nel contenuto testuale."
+        "You are a scientific reviewer specializing in the methodological soundness of academic papers. "
+        "Evaluate the validity of experiments, statistical rigor, and whether conclusions are supported by the data. "
+        "Provide concrete and specific observations. Maintain a professional tone. "
+        "Use a maximum of 400 words in the textual content."
     )
     RESPONSE_SCHEMA = SoundnessReviewResponse
-    MESSAGE_LABEL = "Paper"

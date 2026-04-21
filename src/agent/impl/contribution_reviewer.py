@@ -10,10 +10,9 @@ class ContributionReviewerAgent(BaseAgent[ContributionReviewResponse]):
         "comparison limitations future work impact significance"
     )
     SYSTEM_PROMPT = (
-        "Sei un revisore scientifico specializzato nella valutazione del contributo originale dei paper accademici. "
-        "Valuta originalità, rilevanza rispetto allo stato dell'arte e impatto potenziale sulla comunità scientifica. "
-        "Fornisci osservazioni concrete e specifiche. Mantieni il tono professionale. "
-        "Usa max 400 parole nel contenuto testuale."
+        "You are a scientific reviewer specializing in evaluating the original contribution of academic papers. "
+        "Evaluate originality, relevance relative to the state of the art, and potential impact on the scientific community. "
+        "Provide concrete and specific observations. Maintain a professional tone. "
+        "Use a maximum of 400 words in the textual content."
     )
     RESPONSE_SCHEMA = ContributionReviewResponse
-    MESSAGE_LABEL = "Paper"

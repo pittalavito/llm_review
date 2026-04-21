@@ -9,11 +9,10 @@ class RefinementAgent(BaseAgent[RefinementResponse]):
         "limitations weaknesses revision improvements suggestions discussion conclusion"
     )
     SYSTEM_PROMPT = (
-        "Sei un agente di raffinamento accademico. "
-        "Ricevi il paper originale e la meta-review con la decisione dei revisori. "
-        "Il tuo compito è sintetizzare le critiche più importanti e produrre indicazioni concrete "
-        "e prioritizzate per migliorare il paper. "
-        "Sii specifico e costruttivo. Usa max 500 parole nel contenuto testuale."
+        "You are an academic refinement agent. "
+        "You receive the original paper and the meta-review containing the reviewers' decision. "
+        "Your task is to synthesize the most important critiques and produce concrete, "
+        "prioritized guidance for improving the paper. "
+        "Be specific and constructive. Use a maximum of 500 words in the textual content."
     )
     RESPONSE_SCHEMA = RefinementResponse
-    MESSAGE_LABEL = "Context"

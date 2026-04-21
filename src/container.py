@@ -77,8 +77,8 @@ class Container:
         self._graph_service.compile(agents, graph_config)
 
 
-    def invoke_graph(self, paper_path: str, rag_top_k: int | None = None, force_reindex: bool = False) -> tuple[dict, dict]:
-        return self._graph_service.invoke(paper_path, rag_top_k, force_reindex)
+    def invoke_graph(self, paper_path: str, force_reindex: bool = False) -> tuple[dict, dict]:
+        return self._graph_service.invoke(paper_path, force_reindex)
 
 
     def get_graph_config(self) -> dict | None:

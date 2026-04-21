@@ -3,32 +3,29 @@ from typing import Annotated, TypedDict
 
 
 class ReviewState(TypedDict):
-    # Path relativo al paper — abilita il RAG per-agente
+    # Relative path to the paper — enables per-agent RAG
     paper_path: str | None
 
-    # top_k da usare nel RAG (None = usa il default del servizio)
-    rag_top_k: int | None
-
-    # Metadata dell'indicizzazione
+    # Indexing metadata
     retrieval_metadata: dict | None
 
-    # Review prodotte dai 3 reviewer — accumulate su tutti i round
+    # Reviews produced by the 3 reviewers — accumulated across all rounds
     reviews: Annotated[list, operator.add]
 
-    # Output del meta-reviewer (sovrascritto ad ogni round)
+    # Output of the meta-reviewer (overwritten each round)
     meta_review: dict | None
 
-    # Decisione corrente: accept | minor_revision | major_revision | reject
+    # Current decision: accept | minor_revision | major_revision | reject
     decision: str | None
 
-    # Note di revisione prodotte dal refinement agent (sovrascritte ad ogni round)
+    # Revision notes produced by the refinement agent (overwritten each round)
     revision_notes: str | None
 
-    # Contatore round corrente (incrementato dal meta-reviewer)
+    # Current round counter (incremented by the meta-reviewer)
     current_round: int
 
-    # Numero massimo di round di revisione prima di forzare la fine
+    # Maximum number of revision rounds before forcing termination
     max_rounds: int
 
-    # Cronologia invocazioni agenti — accumulata su tutti i round
+    # Agent invocation history — accumulated across all rounds
     agent_runs: Annotated[list, operator.add]

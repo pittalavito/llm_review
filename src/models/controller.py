@@ -17,7 +17,7 @@ class TestLlmRequest(BaseModel):
         return stripped
     
     
-# estendere TestLlmRequest ?
+# extend TestLlmRequest?
 class TestAgentRequest(TestLlmRequest):
     name: AgentName
     model: LlmModelName
@@ -94,7 +94,6 @@ class PreviewPromptResponse(BaseModel):
 
 class GraphRunRequest(BaseModel):
     paper_path: str = Field(min_length=1, max_length=500)
-    rag_top_k: int | None = Field(default=None, ge=1, le=20)
     force_reindex: bool = False
     graph_config: GraphAgentConfig | None = None
 

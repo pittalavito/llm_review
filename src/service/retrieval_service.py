@@ -1,4 +1,4 @@
-from typing import Any
+import logging
 
 from retrieval.file_reader import PaperFileReader
 from retrieval.tokenizer import BM25Tokenizer
@@ -6,14 +6,10 @@ from retrieval.index_repository import IndexRepository
 from retrieval.context_builder import ContextBuilder
 from retrieval.index_builder import IndexBuilder
 from retrieval.ranker import BM25Ranker
-from models.retrieval import FileSignature, Index, IndexInfo, RetrievalMetadata, RetrievalRequest, RetrievalResponse
+from models.retrieval import FileSignature, Index, IndexInfo, RetrievalMetadata
 from config import PAPERS_DIR, RAG_INDEX_DIR, Config
 
-RAG_QUERY = (
-    "methodology study design experiments experimental setup datasets baselines "
-    "ablation reproducibility threats validity evaluation metrics"
-)
-
+logger = logging.getLogger(__name__)
 
 class RetrievalService:
 
@@ -33,6 +29,7 @@ class RetrievalService:
 
     def list_papers(self) -> list[str]:
         """Return relative paths of all available paper files."""
+        logger.info(f"Listing papers in directory: {PAPERS_DIR}")
         papers_dir = self._file_adapter.papers_dir
         return sorted(
             f.relative_to(papers_dir).as_posix()
@@ -43,6 +40,7 @@ class RetrievalService:
 
     def get_indexed_paper(self, paper_path: str) -> IndexInfo:
         """Return index metadata for a specific paper. Raises ValueError if not indexed."""
+        logger.info(f"Getting index metadata for paper: {paper_path}")
         _, relative_path = self._file_adapter.resolve_paper_path(paper_path)
         doc_id = self._index_repository.compute_doc_id(relative_path)
         index_payload = self._index_repository.load(doc_id)
@@ -59,11 +57,13 @@ class RetrievalService:
 
     def list_indexed_papers(self) -> list[str]:
         """Return paper_path for every paper that has a persisted BM25 index."""
+        logger.info("Listing indexed papers")
         return self._index_repository.list_indexed()
 
 
     def index_paper(self, paper_path: str, force_reindex: bool = False) -> RetrievalMetadata:
         """Build or reuse the BM25 index for a paper. Returns indexing metadata."""
+        logger.info(f"Indexing paper: {paper_path} with force_reindex={force_reindex}")
         resolved_path, relative_path = self._file_adapter.resolve_paper_path(paper_path)
         doc_id = self._index_repository.compute_doc_id(relative_path)
         file_signature = self._file_adapter.build_file_signature(resolved_path)
@@ -86,8 +86,9 @@ class RetrievalService:
 
     def retrieve_for_agent(self, paper_path: str, query: str, sections: list[str] | None = None, top_k: int | None = None) -> str:
         """Retrieve context string for a specific agent (section-aware).
-        Used by BM25ContextProvider — returns only the context string.
+        Used by RetrievalContextProvider — returns only the context string.
         """
+        logger.info(f"Retrieving context for paper: {paper_path} with query: '{query}', sections: {sections}, top_k: {top_k}")
         resolved_path, relative_path = self._file_adapter.resolve_paper_path(paper_path)
         doc_id = self._index_repository.compute_doc_id(relative_path)
         top_k_value = top_k or self.config.rag_top_k_default
@@ -101,65 +102,8 @@ class RetrievalService:
         return self._context_builder.build_context(relative_path, retrieved_chunks)
 
 
-    def retrieve_context(self, paper_path: str, top_k: int | None = None, force_reindex: bool = False, query: str | None = None) -> dict[str, Any]:
-        """Retrieve context for a given paper path, with optional RAG parameters. Returns context and metadata."""
-        request = RetrievalRequest(paper_path=paper_path, top_k=top_k, force_reindex=force_reindex, query=query)
-        result = self.retrieve(request)
-        return {"context": result.context, "metadata": result.metadata.model_dump(),}
-
-
-    def prepare_and_get_text(self, paper_path: str, top_k: int | None = None, force_reindex: bool = False) -> tuple[str, str, dict]:
-        """Valida il path, costruisce/riusa l'indice e restituisce il testo raw del paper.
-        Usato da invoke_from_file per preparare lo stato iniziale del grafo
-        prima che i nodi eseguano il RAG per-agente.
-        Returns:
-            (raw_text, relative_path, retrieval_metadata_dict)
-        """
-        result = self.retrieve(RetrievalRequest(
-            paper_path=paper_path,
-            top_k=top_k,
-            force_reindex=force_reindex,
-            query=RAG_QUERY,
-        ))
-        relative_path = result.metadata.paper_path
-        resolved_path = self._file_adapter.papers_dir / relative_path
-        raw_text = self._file_adapter.extract_text(resolved_path)
-        return raw_text, relative_path, result.metadata.model_dump()
-
-
-    def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
-        resolved_path, relative_path = self._file_adapter.resolve_paper_path(request.paper_path)
-        doc_id = self._index_repository.compute_doc_id(relative_path)
-        top_k_value = request.top_k if request.top_k is not None else self.config.rag_top_k_default
-        file_signature = self._file_adapter.build_file_signature(resolved_path)
-
-        index_payload = self._index_repository.load(doc_id)
-        if request.force_reindex or not self._is_index_valid(index_payload, relative_path, file_signature):
-            index_payload = self._build_index(resolved_path, relative_path, doc_id, file_signature)
-            index_status = "rebuilt"
-        else:
-            index_status = "reused"
-
-        query = request.query or RAG_QUERY
-        retrieved_chunks = self._ranker.retrieve(index_payload, query, top_k_value)
-        context = self._context_builder.build_context(relative_path, retrieved_chunks)
-
-        metadata = RetrievalMetadata(
-            paper_path=relative_path,
-            index_status=index_status,
-            chunk_count_total=len(index_payload.chunks),
-            chunk_count_retrieved=len(retrieved_chunks),
-            top_k=top_k_value,
-        )
-
-        return RetrievalResponse(
-            context=context, 
-            metadata=metadata, 
-            retrieved_chunks=retrieved_chunks
-        )
-
-
     def _build_index(self, source_path: str, relative_path: str, doc_id: str, file_signature: FileSignature) -> Index:
+        logger.info(f"Building index for paper: {relative_path}")
         text = self._file_adapter.extract_text(source_path)        
         payload = self._index_builder.build_index(text, relative_path, doc_id, file_signature)
         self._index_repository.save(payload)
@@ -168,17 +112,24 @@ class RetrievalService:
 
     def _is_index_valid(self, payload: Index | None, relative_path: str, file_signature: FileSignature) -> bool:
         if payload is None:
+            logger.info(f"No existing index payload found for paper: {relative_path}")
             return False
         if payload.paper_path != relative_path:
+            logger.info(f"Paper path mismatch for paper: {relative_path}. Expected: {relative_path}, Found: {payload.paper_path}")
             return False
         if payload.file_signature.mtime_ns != file_signature.mtime_ns:
+            logger.info(f"File modification time mismatch for paper: {relative_path}. Expected: {file_signature.mtime_ns}, Found: {payload.file_signature.mtime_ns}")
             return False
         if payload.file_signature.size != file_signature.size:
+            logger.info(f"File size mismatch for paper: {relative_path}. Expected: {file_signature.size}, Found: {payload.file_signature.size}")
             return False
         if payload.settings.chunk_size != self.config.rag_chunk_size:
+            logger.info(f"Chunk size mismatch for paper: {relative_path}. Expected: {self.config.rag_chunk_size}, Found: {payload.settings.chunk_size}")
             return False
         if payload.settings.chunk_overlap != self.config.rag_chunk_overlap:
+            logger.info(f"Chunk overlap mismatch for paper: {relative_path}. Expected: {self.config.rag_chunk_overlap}, Found: {payload.settings.chunk_overlap}")
             return False
         if payload.settings.strategy_version != self.config.rag_strategy_version:
+            logger.info(f"Strategy version mismatch for paper: {relative_path}. Expected: {self.config.rag_strategy_version}, Found: {payload.settings.strategy_version}")
             return False
         return True

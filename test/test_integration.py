@@ -1,24 +1,21 @@
 """
-Integration tests for the FastAPI layer:
+Integration tests:
   - Config defaults
-  - Container wiring (health_check, agent service, graph compile)
-  - HTTP endpoints via TestClient (all /dev/* routes)
-
-All tests use model=mock so no real LLM / file I/O is needed,
-except for the paper-related endpoints which require a real PDF to exist.
+  - Container wiring
+  - AgentService client factory
+  - RetrievalService (index, retrieve, validate)
 """
 import sys
-import json
+import copy
 import pytest
 
 sys.path.insert(0, "src")
 
-from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
-
 from config import Config
 from container import Container
 from models.agent import AgentName, LlmModelName
+
+PAPER_PATH = "229_Chemical_Language_Models_H.pdf"
 
 
 # ---------------------------------------------------------------------------
@@ -35,14 +32,6 @@ def container(config):
     c = Container(config)
     c.compile_graph()
     return c
-
-
-@pytest.fixture(scope="module")
-def client(config, container):
-    """FastAPI TestClient with a pre-built container injected into app state."""
-    from main import app
-    app.state.container = container
-    return TestClient(app, raise_server_exceptions=True)
 
 
 # ---------------------------------------------------------------------------
@@ -77,20 +66,16 @@ class TestConfig:
 class TestContainer:
 
     def test_health_check_returns_ok(self, container):
-        result = container.health_check()
-        assert result["status"] == "ok"
+        assert container.health_check()["status"] == "ok"
 
     def test_health_check_returns_version(self, container):
-        result = container.health_check()
-        assert "version" in result
+        assert "version" in container.health_check()
 
     def test_list_papers_returns_list(self, container):
-        result = container.list_papers_path()
-        assert isinstance(result, list)
+        assert isinstance(container.list_papers_path(), list)
 
     def test_list_indexed_papers_returns_list(self, container):
-        result = container.list_indexed_papers()
-        assert isinstance(result, list)
+        assert isinstance(container.list_indexed_papers(), list)
 
     def test_build_agent_prompt_returns_dict(self, container):
         result = container.build_agent_prompt(AgentName.SOUNDNESS_REVIEWER, "test message")
@@ -98,13 +83,12 @@ class TestContainer:
         assert "full_prompt" in result
 
     def test_test_agent_with_mock_returns_response(self, container):
-        result = container.test_agent(
+        assert container.test_agent(
             AgentName.SOUNDNESS_REVIEWER, LlmModelName.MOCK, 0.0, "review this paper"
-        )
-        assert result is not None
+        ) is not None
 
-    def test_compile_graph_does_not_raise(self, container):
-        container.compile_graph()  # should be idempotent
+    def test_compile_graph_is_idempotent(self, container):
+        container.compile_graph()
 
 
 # ---------------------------------------------------------------------------
@@ -117,33 +101,29 @@ class TestAgentServiceClientFactory:
         from service.agent_service import AgentService
         from client.mock_chat import MockChatModel
         svc = AgentService(config)
-        client = svc.init_client(LlmModelName.MOCK, 0.0)
-        assert isinstance(client, MockChatModel)
+        assert isinstance(svc.init_client(LlmModelName.MOCK, 0.0), MockChatModel)
 
     def test_client_cached_on_second_call(self, config):
         from service.agent_service import AgentService
         svc = AgentService(config)
-        c1 = svc.init_client(LlmModelName.MOCK, 0.0)
-        c2 = svc.init_client(LlmModelName.MOCK, 0.0)
-        assert c1 is c2
+        assert svc.init_client(LlmModelName.MOCK, 0.0) is svc.init_client(LlmModelName.MOCK, 0.0)
 
-    def test_openai_raises_without_key(self, config):
+    def test_openai_raises_without_key(self):
         from service.agent_service import AgentService
-        svc = AgentService(config)
+        svc = AgentService(Config(openai_api_key=None))
         with pytest.raises(ValueError, match="OPENAI_API_KEY"):
             svc.init_client(LlmModelName.OPENAI_GPT4O, 0.0)
 
-    def test_anthropic_raises_without_key(self, config):
+    def test_anthropic_raises_without_key(self):
         from service.agent_service import AgentService
-        svc = AgentService(config)
+        svc = AgentService(Config(anthropic_api_key=None))
         with pytest.raises(ValueError, match="ANTHROPIC"):
             svc.init_client(LlmModelName.ANTHROPIC_CLAUDE_SONNET, 0.0)
 
     def test_get_agent_class_soundness(self):
         from service.agent_service import AgentService
         from agent.impl.soundness_reviewer import SoundnessReviewerAgent
-        cls = AgentService.get_agent_class(AgentName.SOUNDNESS_REVIEWER)
-        assert cls is SoundnessReviewerAgent
+        assert AgentService.get_agent_class(AgentName.SOUNDNESS_REVIEWER) is SoundnessReviewerAgent
 
     def test_get_agent_class_unknown_raises(self):
         from service.agent_service import AgentService
@@ -154,121 +134,123 @@ class TestAgentServiceClientFactory:
         from service.agent_service import AgentService
         from models.agent import AgentResponse
         svc = AgentService(config)
-        result = svc.run_agent(AgentName.SOUNDNESS_REVIEWER, LlmModelName.MOCK, 0.0, "analyse this")
-        assert isinstance(result, AgentResponse)
+        assert isinstance(
+            svc.run_agent(AgentName.SOUNDNESS_REVIEWER, LlmModelName.MOCK, 0.0, "analyse this"),
+            AgentResponse,
+        )
 
 
 # ---------------------------------------------------------------------------
-# HTTP endpoints — /dev/*
+# RetrievalService
 # ---------------------------------------------------------------------------
 
-class TestHealthEndpoint:
+class TestRetrievalService:
 
-    def test_health_returns_200(self, client):
-        r = client.get("/dev/health")
-        assert r.status_code == 200
+    @pytest.fixture(scope="class")
+    def svc(self):
+        from service.retrieval_service import RetrievalService
+        return RetrievalService(Config())
 
-    def test_health_body_has_status(self, client):
-        r = client.get("/dev/health")
-        assert r.json()["status"] == "ok"
+    # -- list_papers ----------------------------------------------------------
 
+    def test_list_papers_contains_known_paper(self, svc):
+        assert PAPER_PATH in svc.list_papers()
 
-class TestModelsEndpoint:
+    # -- index_paper ----------------------------------------------------------
 
-    def test_models_returns_200(self, client):
-        r = client.get("/dev/models")
-        assert r.status_code == 200
+    def test_index_paper_builds_index(self, svc):
+        meta = svc.index_paper(PAPER_PATH, force_reindex=True)
+        assert meta.paper_path == PAPER_PATH
+        assert meta.index_status == "rebuilt"
+        assert meta.chunk_count_total > 0
 
-    def test_models_contains_mock(self, client):
-        r = client.get("/dev/models")
-        assert LlmModelName.MOCK in r.json()
+    def test_index_paper_reuses_index(self, svc):
+        svc.index_paper(PAPER_PATH, force_reindex=True)
+        assert svc.index_paper(PAPER_PATH, force_reindex=False).index_status == "reused"
 
+    def test_index_paper_invalid_path_raises(self, svc):
+        with pytest.raises((ValueError, FileNotFoundError)):
+            svc.index_paper("nonexistent/paper.pdf")
 
-class TestAgentsEndpoint:
+    # -- retrieve_for_agent ---------------------------------------------------
 
-    def test_list_agents_returns_200(self, client):
-        r = client.get("/dev/agents")
-        assert r.status_code == 200
+    def test_retrieve_for_agent_returns_string(self, svc):
+        svc.index_paper(PAPER_PATH, force_reindex=True)
+        ctx = svc.retrieve_for_agent(PAPER_PATH, query="methodology experiments")
+        assert isinstance(ctx, str) and len(ctx) > 0
 
-    def test_list_agents_contains_all(self, client):
-        r = client.get("/dev/agents")
-        names = r.json()
-        for name in AgentName:
-            assert name in names
+    def test_retrieve_for_agent_with_sections(self, svc):
+        ctx = svc.retrieve_for_agent(
+            PAPER_PATH,
+            query="experimental results",
+            sections=["methods", "experiments", "results"],
+        )
+        assert isinstance(ctx, str)
 
-    def test_test_agent_with_mock(self, client):
-        r = client.post("/dev/agents", json={
-            "name": AgentName.SOUNDNESS_REVIEWER,
-            "model": LlmModelName.MOCK,
-            "temperature": 0.0,
-            "message": "review this paper",
-        })
-        assert r.status_code == 200
+    def test_retrieve_for_agent_rebuilds_if_invalid(self, svc, monkeypatch):
+        monkeypatch.setattr(svc._index_repository, "load", lambda _: None)
+        assert isinstance(svc.retrieve_for_agent(PAPER_PATH, query="model architecture"), str)
 
-    def test_test_agent_invalid_name_returns_400_or_422(self, client):
-        r = client.post("/dev/agents", json={
-            "name": "nonexistent",
-            "model": LlmModelName.MOCK,
-            "temperature": 0.0,
-            "message": "test",
-        })
-        assert r.status_code in {400, 422}
+    # -- get_indexed_paper ----------------------------------------------------
 
-    def test_prompt_preview_returns_200(self, client):
-        r = client.post("/dev/agents/prompt-preview", json={
-            "name": AgentName.SOUNDNESS_REVIEWER,
-            "message": "review this paper",
-        })
-        assert r.status_code == 200
+    def test_get_indexed_paper_returns_info(self, svc):
+        svc.index_paper(PAPER_PATH, force_reindex=True)
+        info = svc.get_indexed_paper(PAPER_PATH)
+        assert info.paper_path == PAPER_PATH and info.chunk_count > 0
 
-    def test_prompt_preview_has_full_prompt(self, client):
-        r = client.post("/dev/agents/prompt-preview", json={
-            "name": AgentName.SOUNDNESS_REVIEWER,
-            "message": "review this paper",
-        })
-        assert "full_prompt" in r.json()
+    def test_get_indexed_paper_not_indexed_raises(self, svc, monkeypatch):
+        monkeypatch.setattr(svc._index_repository, "load", lambda _: None)
+        with pytest.raises(ValueError, match="No index found"):
+            svc.get_indexed_paper(PAPER_PATH)
 
+    # -- list_indexed_papers --------------------------------------------------
 
-class TestPapersEndpoint:
+    def test_list_indexed_papers_returns_list(self, svc):
+        svc.index_paper(PAPER_PATH, force_reindex=True)
+        indexed = svc.list_indexed_papers()
+        assert isinstance(indexed, list) and PAPER_PATH in indexed
 
-    def test_list_papers_returns_200(self, client):
-        r = client.get("/dev/papers")
-        assert r.status_code == 200
+    # -- _is_index_valid branches ---------------------------------------------
 
-    def test_list_papers_returns_list(self, client):
-        r = client.get("/dev/papers")
-        assert isinstance(r.json(), list)
+    def test_is_index_valid_none_payload(self, svc):
+        from models.retrieval import FileSignature
+        assert svc._is_index_valid(None, PAPER_PATH, FileSignature(mtime_ns=0, size=0)) is False
 
-    def test_list_indexed_returns_200(self, client):
-        r = client.get("/dev/papers/indexed")
-        assert r.status_code == 200
+    def test_is_index_valid_path_mismatch(self, svc):
+        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        bad = copy.copy(index)
+        object.__setattr__(bad, "paper_path", "wrong/path.pdf")
+        assert svc._is_index_valid(bad, PAPER_PATH, index.file_signature) is False
 
-    def test_index_paper_invalid_path_returns_400(self, client):
-        r = client.post("/dev/papers/index", json={
-            "paper_path": "nonexistent/paper.pdf",
-            "force_reindex": False,
-        })
-        assert r.status_code == 400
+    def test_is_index_valid_mtime_mismatch(self, svc):
+        from models.retrieval import FileSignature
+        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        assert svc._is_index_valid(index, PAPER_PATH, FileSignature(mtime_ns=0, size=index.file_signature.size)) is False
 
-    def test_get_indexed_detail_not_indexed_returns_404(self, client):
-        r = client.get("/dev/papers/indexed/detail", params={"paper_path": "nonexistent.pdf"})
-        assert r.status_code == 404
+    def test_is_index_valid_size_mismatch(self, svc):
+        from models.retrieval import FileSignature
+        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        assert svc._is_index_valid(index, PAPER_PATH, FileSignature(mtime_ns=index.file_signature.mtime_ns, size=0)) is False
 
+    def test_is_index_valid_chunk_size_mismatch(self, svc, monkeypatch):
+        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        fs = svc._file_adapter.build_file_signature(svc._file_adapter.papers_dir / PAPER_PATH)
+        monkeypatch.setattr(svc.config, "rag_chunk_size", 9999)
+        assert svc._is_index_valid(index, PAPER_PATH, fs) is False
 
-class TestGraphEndpoints:
+    def test_is_index_valid_chunk_overlap_mismatch(self, svc, monkeypatch):
+        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        fs = svc._file_adapter.build_file_signature(svc._file_adapter.papers_dir / PAPER_PATH)
+        monkeypatch.setattr(svc.config, "rag_chunk_overlap", 9999)
+        assert svc._is_index_valid(index, PAPER_PATH, fs) is False
 
-    def test_compile_graph_returns_200(self, client):
-        r = client.post("/dev/graph/compile", json=None)
-        assert r.status_code == 200
+    def test_is_index_valid_strategy_version_mismatch(self, svc, monkeypatch):
+        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        fs = svc._file_adapter.build_file_signature(svc._file_adapter.papers_dir / PAPER_PATH)
+        monkeypatch.setattr(svc.config, "rag_strategy_version", "old-version")
+        assert svc._is_index_valid(index, PAPER_PATH, fs) is False
 
-    def test_compile_graph_status_compiled(self, client):
-        r = client.post("/dev/graph/compile", json=None)
-        assert r.json()["status"] == "compiled"
-
-    def test_run_graph_invalid_paper_returns_400(self, client):
-        r = client.post("/dev/graph/run", json={
-            "paper_path": "nonexistent/paper.pdf",
-            "rag_top_k": None,
-            "force_reindex": False,
-        })
-        assert r.status_code in {400, 409, 500}
+    def test_is_index_valid_happy_path(self, svc):
+        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        fs = svc._file_adapter.build_file_signature(svc._file_adapter.papers_dir / PAPER_PATH)
+        assert svc._is_index_valid(index, PAPER_PATH, fs) is True

@@ -1,15 +1,11 @@
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from service.retrieval_service import RetrievalService
+from models.protocols import ContextProvider
+from service.retrieval_service import RetrievalService
 
 
-class BM25ContextProvider:
-    """Implementazione del ContextProvider Protocol basata su BM25.
-    Configurata con query e sezioni specifiche dell'agente.
-    L'agente non conosce né RetrievalService né BM25 — riceve solo get_context().
+class RetrievalContextProvider(ContextProvider):
+    """Adapter between RetrievalService and the ContextProvider Protocol.
+    Configured with agent-specific queries and sections.
+    The agent is unaware of RetrievalService — it only receives get_context().
     """
 
     def __init__(

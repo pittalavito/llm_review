@@ -1,5 +1,8 @@
 /**
  * sections/graphcompile.js — Configure and compile the review graph.
+ * Layout:
+ *   1. Config compilata (read-only, current state)
+ *   2. Nuova configurazione (form, pre-filled with current or defaults)
  */
 
 import { listModels, compileGraph, getGraphConfig } from '../api.js';
@@ -13,6 +16,8 @@ const AGENT_LABELS = {
 };
 
 const AGENT_NAMES = Object.keys(AGENT_LABELS);
+const DEFAULT_MODEL = 'mock';
+const DEFAULT_TEMP  = 0.7;
 
 // ---------------------------------------------------------------------------
 // render
@@ -23,10 +28,19 @@ export function render() {
   el.className = 'section';
   el.innerHTML = `
     <h2 class="section__title">Graph Compile</h2>
-    <p class="section__desc">Configura modello e temperatura per ogni agente e compila il grafo.</p>
+    <p class="section__desc">Visualizza la configurazione attiva e compilane una nuova.</p>
 
+    <!-- 1. Config compilata corrente -->
+    <div class="gr-card" id="gc-current-card">
+      <div class="gr-card-title">Config compilata</div>
+      <div id="gc-current-body">
+        <p class="muted">Caricamento…</p>
+      </div>
+    </div>
+
+    <!-- 2. Nuova configurazione -->
     <div class="gr-card">
-      <div class="gr-card-title">Configurazione agenti</div>
+      <div class="gr-card-title">Nuova configurazione</div>
 
       <div class="gr-globals">
         <div class="form-group form-group--inline">
@@ -43,16 +57,10 @@ export function render() {
       </div>
 
       <div class="gr-card-footer">
-        <button id="gc-compile-btn" class="btn btn--secondary" disabled>⚙ Compila grafo</button>
+        <button id="gc-compile-btn" class="btn btn--secondary" disabled>⚙ Compila</button>
         <span id="gc-status" class="gr-status"></span>
       </div>
       <div id="gc-error" class="error-msg" hidden></div>
-    </div>
-
-    <!-- Config compilata corrente -->
-    <div class="gr-card" id="gc-current-card" hidden>
-      <div class="gr-card-title">Config compilata</div>
-      <div id="gc-current-body"></div>
     </div>
   `;
   return el;
@@ -63,36 +71,47 @@ export function render() {
 // ---------------------------------------------------------------------------
 
 export async function mount(el) {
-  const agentRows  = el.querySelector('#gc-agents-rows');
-  const compileBtn = el.querySelector('#gc-compile-btn');
-  const status     = el.querySelector('#gc-status');
-  const errorDiv   = el.querySelector('#gc-error');
-  const currentCard = el.querySelector('#gc-current-card');
   const currentBody = el.querySelector('#gc-current-body');
+  const agentRows   = el.querySelector('#gc-agents-rows');
+  const maxRoundsEl = el.querySelector('#gc-max-rounds');
+  const compileBtn  = el.querySelector('#gc-compile-btn');
+  const status      = el.querySelector('#gc-status');
+  const errorDiv    = el.querySelector('#gc-error');
 
+  // Load models + current config in parallel
   let models = [], currentConfig = null;
   try {
     [models, currentConfig] = await Promise.all([listModels(), getGraphConfig()]);
   } catch (e) {
     showError(errorDiv, `Errore caricamento: ${e.message}`);
+    currentBody.innerHTML = '<p class="muted">Non disponibile.</p>';
     return;
   }
 
-  // Build agent rows
-  agentRows.innerHTML = AGENT_NAMES.map(name => `
-    <div class="gr-agent-row" data-agent="${name}">
-      <span class="gr-agent-name">${AGENT_LABELS[name]}</span>
-      <select class="form-select gr-model-sel">
-        ${models.map(m => `<option value="${m}" ${m === 'mock' ? 'selected' : ''}>${m}</option>`).join('')}
-      </select>
-      <input type="number" class="form-input gr-temp-inp" value="0.7" min="0" max="2" step="0.1" />
-    </div>
-  `).join('');
+  // 1. Render current compiled config
+  renderCompiledConfig(currentBody, currentConfig);
+
+  // 2. Pre-fill new config form with current config (or defaults)
+  const prefill = currentConfig || defaultConfig();
+  maxRoundsEl.value = prefill.max_rounds ?? 2;
+
+  agentRows.innerHTML = AGENT_NAMES.map(name => {
+    const existing = prefill.agents?.find(a => a.agent_name === name);
+    const model    = existing?.model       ?? DEFAULT_MODEL;
+    const temp     = existing?.temperature ?? DEFAULT_TEMP;
+    return `
+      <div class="gr-agent-row" data-agent="${name}">
+        <span class="gr-agent-name">${AGENT_LABELS[name]}</span>
+        <select class="form-select gr-model-sel">
+          ${models.map(m => `<option value="${m}" ${m === model ? 'selected' : ''}>${m}</option>`).join('')}
+        </select>
+        <input type="number" class="form-input gr-temp-inp"
+               value="${temp}" min="0" max="2" step="0.1" />
+      </div>
+    `;
+  }).join('');
 
   compileBtn.disabled = false;
-
-  // Show existing config
-  if (currentConfig) renderCurrentConfig(currentCard, currentBody, currentConfig);
 
   // Compile
   compileBtn.addEventListener('click', async () => {
@@ -110,16 +129,17 @@ export async function mount(el) {
       };
     });
 
-    const graphConfig = {
+    const newConfig = {
       agents:     agentConfigs,
-      max_rounds: parseInt(el.querySelector('#gc-max-rounds').value, 10),
+      max_rounds: parseInt(maxRoundsEl.value, 10),
     };
 
     try {
-      await compileGraph(graphConfig);
+      await compileGraph(newConfig);
       status.textContent = '✅ Grafo compilato';
       status.className = 'gr-status gr-status--ok';
-      renderCurrentConfig(currentCard, currentBody, graphConfig);
+      // Refresh the "compiled" card with the new config
+      renderCompiledConfig(currentBody, newConfig);
     } catch (e) {
       status.textContent = '';
       showError(errorDiv, e.message);
@@ -133,7 +153,11 @@ export async function mount(el) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function renderCurrentConfig(card, body, config) {
+function renderCompiledConfig(container, config) {
+  if (!config) {
+    container.innerHTML = `<p class="gr-no-config">Nessun grafo compilato.</p>`;
+    return;
+  }
   const agents    = config.agents || [];
   const maxRounds = config.max_rounds ?? '?';
   const rows = agents.map(a => `
@@ -143,14 +167,24 @@ function renderCurrentConfig(card, body, config) {
       <td>${a.temperature}</td>
     </tr>
   `).join('');
-  body.innerHTML = `
+  container.innerHTML = `
     <p class="gr-config-meta">Max rounds: <strong>${maxRounds}</strong></p>
     <table class="gr-config-table">
       <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
-  card.hidden = false;
+}
+
+function defaultConfig() {
+  return {
+    max_rounds: 2,
+    agents: AGENT_NAMES.map(name => ({
+      agent_name:  name,
+      model:       DEFAULT_MODEL,
+      temperature: DEFAULT_TEMP,
+    })),
+  };
 }
 
 function showError(el, msg) { el.textContent = msg; el.hidden = false; }

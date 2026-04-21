@@ -1,13 +1,16 @@
 import logging
 
+from config import Config
+
 from threading import RLock
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_ollama import ChatOllama
+from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 
-from config import Config
 from client.mock_chat import MockChatModel
 from graph.config import GraphAgentConfig
-from retrieval.bm25_context_provider import BM25ContextProvider
+from service.retrieval_context_provider import RetrievalContextProvider
 from models.agent import AgentName, AgentResponse, LlmModelName
 from agent.base import BaseAgent
 from agent.impl.contribution_reviewer import ContributionReviewerAgent
@@ -16,7 +19,9 @@ from agent.impl.presentation_reviewer import PresentationReviewerAgent
 from agent.impl.refinement import RefinementAgent
 from agent.impl.soundness_reviewer import SoundnessReviewerAgent
 
+
 logger = logging.getLogger(__name__)
+
 
 _REGISTRY: dict[AgentName, type[BaseAgent]] = {
     AgentName.SOUNDNESS_REVIEWER: SoundnessReviewerAgent,
@@ -58,7 +63,7 @@ class AgentService:
             client = self.init_client(model, temperature)
             context_provider = self._build_context_provider(self.get_agent_class(name), retrieval_service)  
             agent_class = self.get_agent_class(name)
-            agent = agent_class(llm=client, context_provider=context_provider,)
+            agent = agent_class(client=client, context_provider=context_provider)
             self._agent_cache[key] = agent
             return agent
 
@@ -100,6 +105,7 @@ class AgentService:
             return MockChatModel()
 
         if model.is_ollama():
+            logger.info(f"Initializing Ollama client with model={model}, temperature={temperature}")
             return ChatOllama(
                 model=model,
                 base_url=config.ollama_url,
@@ -109,9 +115,9 @@ class AgentService:
             )
 
         if model.is_openai():
-            from langchain_openai import ChatOpenAI
             if not config.openai_api_key:
                 raise ValueError("OPENAI_API_KEY not configured.")
+            logger.info(f"Initializing OpenAI client with model={model}, temperature={temperature}")
             return ChatOpenAI(
                 model=model,
                 api_key=config.openai_api_key,
@@ -119,9 +125,9 @@ class AgentService:
             )
 
         if model.is_anthropic():
-            from langchain_anthropic import ChatAnthropic
             if not config.anthropic_api_key:
                 raise ValueError("ANTHROPIC_API_KEY not configured.")
+            logger.info(f"Initializing Anthropic client with model={model}, temperature={temperature}")
             return ChatAnthropic(
                 model=model,
                 api_key=config.anthropic_api_key,
@@ -131,11 +137,13 @@ class AgentService:
         raise ValueError(f"Unsupported LLM model: {model}")
 
 
-    def _build_context_provider(self, agent_class: type[BaseAgent], retrieval_service) -> BM25ContextProvider | None:
+    def _build_context_provider(self, agent_class: type[BaseAgent], retrieval_service) -> RetrievalContextProvider | None:
         if agent_class.RAG_QUERY and retrieval_service:
-            return BM25ContextProvider(
+            logger.info(f"Building RetrievalContextProvider for agent_class={agent_class.__name__}")
+            return RetrievalContextProvider(
                 retrieval_service=retrieval_service,
                 query=agent_class.RAG_QUERY,
                 sections=agent_class.RAG_SECTIONS,
             )
+        logger.info(f"No context provider needed for agent_class={agent_class.__name__}")
         return None

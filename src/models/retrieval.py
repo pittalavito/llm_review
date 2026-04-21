@@ -1,29 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
-
-
-class RetrievalRequest(BaseModel):
-    paper_path: str = Field(min_length=1, max_length=500)
-    top_k: int | None = Field(default=None, ge=1, le=20)
-    force_reindex: bool = False
-    query: str | None = Field(default=None, max_length=2_000)
-
-    @field_validator("paper_path")
-    @classmethod
-    def validate_path(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("Paper path must not be empty.")
-        return stripped
-
-    @field_validator("query")
-    @classmethod
-    def validate_query(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        stripped = value.strip()
-        return stripped or None
+from pydantic import BaseModel, Field
 
 
 class FileSignature(BaseModel):
@@ -77,7 +54,3 @@ class IndexInfo(BaseModel):
     chunk_count: int = Field(ge=0)
 
 
-class RetrievalResponse(BaseModel):
-    context: str
-    metadata: RetrievalMetadata
-    retrieved_chunks: list[RetrievedChunk]

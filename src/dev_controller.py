@@ -174,7 +174,6 @@ def run_graph(body: GraphRunRequest, container: Container = Depends(inject_conta
             container.compile_graph(body.graph_config)
         result, metadata = container.invoke_graph(
             paper_path=body.paper_path,
-            rag_top_k=body.rag_top_k,
             force_reindex=body.force_reindex,
         )
         return {

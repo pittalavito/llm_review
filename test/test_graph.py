@@ -12,13 +12,6 @@ import pytest
 sys.path.insert(0, "src")
 
 from models.agent import AgentName, ReviewDecision
-from models.agent import (
-    MetaReviewResponse,
-    RefinementResponse,
-    SoundnessReviewResponse,
-    ContributionReviewResponse,
-    PresentationReviewResponse,
-)
 from agent.impl.soundness_reviewer import SoundnessReviewerAgent
 from agent.impl.contribution_reviewer import ContributionReviewerAgent
 from agent.impl.presentation_reviewer import PresentationReviewerAgent
@@ -36,18 +29,17 @@ from graph.state import ReviewState
 def make_agents(mock_llm=None) -> dict[AgentName, object]:
     llm = mock_llm or MockChatModel()
     return {
-        AgentName.SOUNDNESS_REVIEWER:    SoundnessReviewerAgent(llm=llm),
-        AgentName.PRESENTATION_REVIEWER: PresentationReviewerAgent(llm=llm),
-        AgentName.CONTRIBUTION_REVIEWER: ContributionReviewerAgent(llm=llm),
-        AgentName.META_REVIEWER:         MetaReviewerAgent(llm=llm),
-        AgentName.REFINEMENT_AGENT:      RefinementAgent(llm=llm),
+        AgentName.SOUNDNESS_REVIEWER:    SoundnessReviewerAgent(client=llm),
+        AgentName.PRESENTATION_REVIEWER: PresentationReviewerAgent(client=llm),
+        AgentName.CONTRIBUTION_REVIEWER: ContributionReviewerAgent(client=llm),
+        AgentName.META_REVIEWER:         MetaReviewerAgent(client=llm),
+        AgentName.REFINEMENT_AGENT:      RefinementAgent(client=llm),
     }
 
 
 def base_state(**overrides) -> ReviewState:
     state: ReviewState = {
         "paper_path": None,
-        "rag_top_k": None,
         "retrieval_metadata": None,
         "reviews": [],
         "meta_review": None,

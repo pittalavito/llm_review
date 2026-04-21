@@ -105,6 +105,36 @@
 .gr-config-table td { padding: var(--s-1) var(--s-2); color: var(--c-text-secondary); }
 .gr-config-table code { color: var(--c-accent); font-family: var(--font-mono); }
 
+/* ── Config table (compile + run) ────────────────────── */
+.gr-config-meta { font-size: var(--text-sm); color: var(--c-text-secondary); margin-bottom: var(--s-3); }
+.gr-config-meta strong { color: var(--c-text-primary); }
+.gr-config-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.gr-config-table th {
+  color: var(--c-text-muted); text-transform: uppercase; letter-spacing: .05em; font-size: var(--text-xs);
+  padding: var(--s-2) var(--s-3); text-align: left; border-bottom: 1px solid var(--c-border);
+}
+.gr-config-table td { padding: var(--s-2) var(--s-3); color: var(--c-text-secondary); border-bottom: 1px solid var(--c-border); }
+.gr-config-table tr:last-child td { border-bottom: none; }
+.gr-config-table code { color: var(--c-accent); font-family: var(--font-mono); font-size: var(--text-xs); }
+.gr-no-config { font-size: var(--text-sm); color: var(--c-text-muted); }
+.gr-no-config strong { color: var(--c-accent); }
+
+/* ── Card header row (title + action buttons) ────────── */
+.gr-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s-4);
+}
+.gr-card-header-row .gr-card-title { margin-bottom: 0; }
+.gr-card-actions { display: flex; gap: var(--s-2); }
+.gr-card-actions [hidden] { display: none !important; }
+
+/* ── Editable config table ───────────────────────────── */
+.gr-config-table--edit td { vertical-align: middle; padding: var(--s-1) var(--s-2); }
+.gr-config-table--edit .form-select { width: 100%; }
+.gr-config-table--edit .form-input  { width: 64px; }
+
 /* ── Globals row ─────────────────────────────────────── */
 .gr-globals { display: flex; gap: var(--s-6); margin-bottom: var(--s-4); }
 

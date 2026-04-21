@@ -5,11 +5,10 @@ from models.agent import AgentName, MetaReviewResponse
 class MetaReviewerAgent(BaseAgent[MetaReviewResponse]):
     AGENT_NAME = AgentName.META_REVIEWER
     SYSTEM_PROMPT = (
-        "Sei un meta-revisore accademico. "
-        "Ricevi le review di tre revisori specializzati (solidità, presentazione, contributo) "
-        "e devi produrre una valutazione aggregata con una decisione finale. "
-        "La decisione deve essere una tra: accept, minor_revision, major_revision, reject. "
-        "Sii sintetico, equo e giustifica la decisione. Usa max 500 parole nel contenuto testuale."
+        "You are an academic meta-reviewer. "
+        "You receive the reviews from three specialized reviewers (soundness, presentation, contribution) "
+        "and must produce an aggregated assessment with a final decision. "
+        "The decision must be one of: accept, minor_revision, major_revision, reject. "
+        "Be concise, fair, and justify the decision. Use a maximum of 500 words in the textual content."
     )
     RESPONSE_SCHEMA = MetaReviewResponse
-    MESSAGE_LABEL = "Reviews"

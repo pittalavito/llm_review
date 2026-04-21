@@ -22,7 +22,7 @@ from models.agent import (
     MetaReviewResponse,
     RefinementResponse,
 )
-from agent.base import BaseAgent, AgentValidationError
+from agent.base import BaseAgent
 from agent.impl.soundness_reviewer import SoundnessReviewerAgent
 from agent.impl.contribution_reviewer import ContributionReviewerAgent
 from agent.impl.presentation_reviewer import PresentationReviewerAgent
@@ -124,7 +124,7 @@ class TestBaseAgent:
 
     @pytest.fixture
     def agent(self):
-        return ConcreteAgent(llm=SimpleResponseMock())
+        return ConcreteAgent(client=SimpleResponseMock())
 
     def test_run_returns_agent_response(self, agent):
         result = agent.run("analyse this paper")
@@ -149,12 +149,12 @@ class TestBaseAgent:
 
     def test_run_with_context_provider(self):
         provider = FakeContextProvider("important finding from methods section")
-        agent = ConcreteAgent(llm=SimpleResponseMock(), context_provider=provider)
+        agent = ConcreteAgent(client=SimpleResponseMock(), context_provider=provider)
         result = agent.run("analyse this paper", paper_path="paper.pdf")
         assert isinstance(result.payload, SimpleResponse)
 
     def test_run_without_context_provider_ignores_paper_path(self):
-        agent = ConcreteAgent(llm=SimpleResponseMock(), context_provider=None)
+        agent = ConcreteAgent(client=SimpleResponseMock(), context_provider=None)
         result = agent.run("analyse this paper", paper_path="paper.pdf")
         assert isinstance(result.payload, SimpleResponse)
 
@@ -229,43 +229,43 @@ class TestConcreteAgentsWithMock:
         return MockChatModel()
 
     def test_soundness_reviewer_returns_typed_payload(self, mock_llm):
-        agent = SoundnessReviewerAgent(llm=mock_llm)
+        agent = SoundnessReviewerAgent(client=mock_llm)
         result = agent.run("review this paper")
         assert isinstance(result.payload, SoundnessReviewResponse)
 
     def test_contribution_reviewer_returns_typed_payload(self, mock_llm):
-        agent = ContributionReviewerAgent(llm=mock_llm)
+        agent = ContributionReviewerAgent(client=mock_llm)
         result = agent.run("review this paper")
         assert isinstance(result.payload, ContributionReviewResponse)
 
     def test_presentation_reviewer_returns_typed_payload(self, mock_llm):
-        agent = PresentationReviewerAgent(llm=mock_llm)
+        agent = PresentationReviewerAgent(client=mock_llm)
         result = agent.run("review this paper")
         assert isinstance(result.payload, PresentationReviewResponse)
 
     def test_meta_reviewer_returns_typed_payload(self, mock_llm):
-        agent = MetaReviewerAgent(llm=mock_llm)
+        agent = MetaReviewerAgent(client=mock_llm)
         result = agent.run("review this paper")
         assert isinstance(result.payload, MetaReviewResponse)
 
     def test_refinement_returns_typed_payload(self, mock_llm):
-        agent = RefinementAgent(llm=mock_llm)
+        agent = RefinementAgent(client=mock_llm)
         result = agent.run("refine this paper")
         assert isinstance(result.payload, RefinementResponse)
 
     def test_soundness_reviewer_agent_name(self, mock_llm):
-        agent = SoundnessReviewerAgent(llm=mock_llm)
+        agent = SoundnessReviewerAgent(client=mock_llm)
         result = agent.run("review this paper")
         assert result.agent == AgentName.SOUNDNESS_REVIEWER
 
     def test_meta_reviewer_decision_field(self, mock_llm):
-        agent = MetaReviewerAgent(llm=mock_llm)
+        agent = MetaReviewerAgent(client=mock_llm)
         result = agent.run("review this paper")
         assert result.payload.decision in {"accept", "minor_revision", "major_revision", "reject"}
 
     def test_to_json_serializable(self, mock_llm):
         import json
-        agent = SoundnessReviewerAgent(llm=mock_llm)
+        agent = SoundnessReviewerAgent(client=mock_llm)
         result = agent.run("review this paper")
         data = json.loads(result.to_json())
         assert "payload" in data

@@ -54,10 +54,10 @@ class GraphBuilder:
     def _reviewer_node(agent: BaseAgent):
         def node(state: ReviewState) -> dict:
             paper_path = state.get("paper_path")
-            message = "Analizza il paper e fornisci una review strutturata."
+            message = "Analyze the paper and provide a structured review."
             revision_notes = state.get("revision_notes")
             if revision_notes:
-                message += f"\n\nNote di revisione dal round precedente:\n{revision_notes}"
+                message += f"\n\nRevision notes from the previous round:\n{revision_notes}"
 
             response = agent.run(message, paper_path=paper_path)
             agent_run = AgentRun(
@@ -101,7 +101,7 @@ class GraphBuilder:
         def node(state: ReviewState) -> dict:
             paper_path = state.get("paper_path")
             meta_review = json.dumps(state.get("meta_review") or {}, ensure_ascii=False, indent=2)
-            message = f"Meta-review ricevuta:\n{meta_review}"
+            message = f"Meta-review received:\n{meta_review}"
 
             response = agent.run(message, paper_path=paper_path)
             payload = response.payload  # RefinementResponse — typed

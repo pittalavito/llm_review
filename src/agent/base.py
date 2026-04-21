@@ -10,7 +10,7 @@ from langchain_core.runnables import Runnable
 from pydantic import BaseModel
 
 from models.agent import AgentName, AgentResponse, RawResponse, T
-from retrieval.protocols import ContextProvider
+from models.protocols import ContextProvider
 
 logger = logging.getLogger(__name__)
 
@@ -29,19 +29,18 @@ class BaseAgent(ABC, Generic[T]):
     AGENT_NAME: AgentName
     SYSTEM_PROMPT: str = ""
     RESPONSE_SCHEMA: type[T] | None = None
-    MESSAGE_LABEL: str = "Message"
     RAG_QUERY: str = ""
     RAG_SECTIONS: list[str] = []
 
-    def __init__(self, llm: BaseChatModel, context_provider: ContextProvider | None = None):
-        self.llm = llm
+    def __init__(self, client: BaseChatModel, context_provider: ContextProvider | None = None):
+        self.client = client
         self.name = self.AGENT_NAME
         self._context_provider = context_provider
         self._prompt = ChatPromptTemplate.from_messages([
             ("system", self.SYSTEM_PROMPT),
             ("human", "{context}{message}"),
         ])
-        self._chain: Runnable = self._build_chain(llm)
+        self._chain: Runnable = self._build_chain(client)
 
     # ------------------------------------------------------------------
     # Public API
@@ -58,11 +57,13 @@ class BaseAgent(ABC, Generic[T]):
         context_block = self._format_context_block(raw_context)
 
         try:
+            logger.info("Invoking chain for agent '%s' with message: %s", self.name, normalized[:50])
             result = self._chain.invoke({"message": normalized, "context": context_block})
         except Exception as exc:
             raise AgentValidationError(str(exc)) from exc
 
         payload = self._extract_payload(result)
+        logger.info("Agent '%s' produced response: %s", self.name, str(payload)[:100])
         return AgentResponse(
             agent=self.name,
             payload=payload,
@@ -108,10 +109,10 @@ class BaseAgent(ABC, Generic[T]):
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _build_chain(self, llm: BaseChatModel) -> Runnable:
+    def _build_chain(self, client: BaseChatModel) -> Runnable:
         if self.RESPONSE_SCHEMA is not None:
-            return self._prompt | llm.with_structured_output(self.RESPONSE_SCHEMA)
-        return self._prompt | llm
+            return self._prompt | client.with_structured_output(self.RESPONSE_SCHEMA)
+        return self._prompt | client
 
     def _get_raw_context(self, paper_path: str | None) -> str:
         if not paper_path or not self._context_provider:
@@ -137,7 +138,3 @@ class BaseAgent(ABC, Generic[T]):
                 return msg.content
         return ""
 
-    def _build_schema_json(self) -> str:
-        if self.RESPONSE_SCHEMA is None:
-            return ""
-        return json.dumps(self.RESPONSE_SCHEMA.model_json_schema(), ensure_ascii=False, indent=2)

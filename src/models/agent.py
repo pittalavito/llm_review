@@ -58,7 +58,7 @@ class AgentName(StrEnum):
 ##########################################################
 
 class RawResponse(BaseModel):
-    """Fallback payload per agenti senza schema strutturato."""
+    """Fallback payload for agents without a structured output schema."""
     response: str
 
 
@@ -80,22 +80,22 @@ class AgentResponse(BaseModel, Generic[T]):
 ##########################################################
 
 class BaseReviewResponse(BaseModel):
-    """Campi comuni a tutte le review specializzate."""
+    """Common fields shared by all specialized review responses."""
     summary: str = Field(min_length=1, max_length=2_000)
     strengths: list[str] = Field(min_length=1, max_length=10)
     weaknesses: list[str] = Field(min_length=1, max_length=10)
     confidence: int = Field(ge=1, le=5)
 
 class SoundnessReviewResponse(BaseReviewResponse):
-    """Valuta la solidità scientifica: validità dei metodi, rigore sperimentale, supporto delle conclusioni."""
+    """Evaluates scientific soundness: validity of methods, experimental rigor, and support for conclusions."""
     soundness_score: int = Field(ge=1, le=5)
 
 class PresentationReviewResponse(BaseReviewResponse):
-    """Valuta chiarezza, struttura e qualità della scrittura del paper."""
+    """Evaluates the clarity, structure, and writing quality of the paper."""
     presentation_score: int = Field(ge=1, le=5)
 
 class ContributionReviewResponse(BaseReviewResponse):
-    """Valuta originalità, rilevanza e impatto del contributo scientifico."""
+    """Evaluates the originality, relevance, and impact of the scientific contribution."""
     contribution_score: int = Field(ge=1, le=5)
 
 
@@ -110,7 +110,7 @@ class ReviewDecision(StrEnum):
     REJECT = "reject"
 
 class MetaReviewResponse(BaseModel):
-    """Aggrega le review dei tre reviewer e produce la decisione finale."""
+    """Aggregates the reviews from the three reviewers and produces the final decision."""
     summary: str = Field(min_length=1, max_length=3_000)
     key_points: list[str] = Field(min_length=1, max_length=10)
     overall_score: int = Field(ge=1, le=5)
@@ -122,7 +122,7 @@ class MetaReviewResponse(BaseModel):
 ###########################################################
 
 class RefinementResponse(BaseModel):
-    """Sintetizza le critiche e produce indicazioni concrete per migliorare il paper."""
+    """Synthesizes the critiques and produces concrete guidance for improving the paper."""
     revision_summary: str = Field(min_length=1, max_length=2_000)
     priority_changes: list[str] = Field(min_length=1, max_length=10)
     suggested_improvements: list[str] = Field(min_length=1, max_length=10)

@@ -3,17 +3,17 @@ from models.agent import AgentName
 
 
 class AgentRun(BaseModel):
-    """Traccia completa di una singola invocazione agente."""
+    """Complete trace of a single agent invocation."""
     agent: AgentName
     round: int                   # 0-based
     input_message: str
-    context_used: str | None     # chunk RAG iniettati (se presenti)
-    response_payload: dict       # risposta strutturata
+    context_used: str | None     # RAG chunks injected (if any)
+    response_payload: dict       # structured response
 
 
 class RunRecord(BaseModel):
-    """Record completo di un'esecuzione del grafo di review."""
-    run_id: str                  # es. "2026-04-21T14-32-00_paper-name"
+    """Complete record of a single review graph execution."""
+    run_id: str                  # e.g. "2026-04-21T14-32-00_paper-name"
     timestamp: str               # ISO 8601
     paper_path: str
     decision: str | None
@@ -26,7 +26,7 @@ class RunRecord(BaseModel):
 
 
 class RunSummary(BaseModel):
-    """Versione leggera di RunRecord per la lista storico."""
+    """Lightweight version of RunRecord for the run history list."""
     run_id: str
     timestamp: str
     paper_path: str
