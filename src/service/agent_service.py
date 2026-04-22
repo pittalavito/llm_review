@@ -16,7 +16,7 @@ from agent.base import BaseAgent
 from agent.impl.contribution_reviewer import ContributionReviewerAgent
 from agent.impl.meta_reviewer import MetaReviewerAgent
 from agent.impl.presentation_reviewer import PresentationReviewerAgent
-from agent.impl.refinement import RefinementAgent
+from agent.impl.author_agent import AuthorAgent
 from agent.impl.soundness_reviewer import SoundnessReviewerAgent
 
 
@@ -29,7 +29,7 @@ _REGISTRY: dict[AgentName, type[BaseAgent]] = {
     AgentName.PRESENTATION_REVIEWER: PresentationReviewerAgent,
     AgentName.CONTRIBUTION_REVIEWER: ContributionReviewerAgent,
     AgentName.META_REVIEWER: MetaReviewerAgent,
-    AgentName.REFINEMENT_AGENT: RefinementAgent,
+    AgentName.AUTHOR_AGENT: AuthorAgent,
 }
 
 

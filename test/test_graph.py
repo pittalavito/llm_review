@@ -1,7 +1,7 @@
 """
 Unit tests for the graph layer:
   - GraphBuilder.build() — topology
-  - Node functions — reviewer_node, meta_node, refinement_node
+  - Node functions — reviewer_node, meta_node, author_node
   - Conditional edges — _meta_decision, _should_loop
   - Full graph invocation with MockChatModel (accept path + revision loop)
 """
@@ -16,7 +16,7 @@ from agent.impl.soundness_reviewer import SoundnessReviewerAgent
 from agent.impl.contribution_reviewer import ContributionReviewerAgent
 from agent.impl.presentation_reviewer import PresentationReviewerAgent
 from agent.impl.meta_reviewer import MetaReviewerAgent
-from agent.impl.refinement import RefinementAgent
+from agent.impl.author_agent import AuthorAgent
 from client.mock_chat import MockChatModel
 from graph.builder import GraphBuilder
 from graph.state import ReviewState
@@ -33,7 +33,7 @@ def make_agents(mock_llm=None) -> dict[AgentName, object]:
         AgentName.PRESENTATION_REVIEWER: PresentationReviewerAgent(client=llm),
         AgentName.CONTRIBUTION_REVIEWER: ContributionReviewerAgent(client=llm),
         AgentName.META_REVIEWER:         MetaReviewerAgent(client=llm),
-        AgentName.REFINEMENT_AGENT:      RefinementAgent(client=llm),
+        AgentName.AUTHOR_AGENT:          AuthorAgent(client=llm),
     }
 
 
@@ -44,7 +44,8 @@ def base_state(**overrides) -> ReviewState:
         "reviews": [],
         "meta_review": None,
         "decision": None,
-        "revision_notes": None,
+        "author_response": None,
+        "revised_sections": None,
         "current_round": 0,
         "max_rounds": 2,
     }
@@ -137,13 +138,16 @@ class TestReviewerNode:
         assert "agent" in data
         assert "payload" in data
 
-    def test_reviewer_node_includes_revision_notes(self):
-        """When revision_notes in state, message passed to agent contains them."""
+    def test_reviewer_node_includes_author_response(self):
+        """When author_response in state, reviewer message includes rebuttal and revised sections."""
         agents = make_agents()
         node_fn = GraphBuilder._reviewer_node(agents[AgentName.SOUNDNESS_REVIEWER])
-        state = base_state(revision_notes="Please improve section 3.")
+        state = base_state(author_response={
+            "rebuttal": "We have addressed all concerns.",
+            "revised_sections": {"methods": "Updated methods section."},
+            "key_changes": ["Updated methods"],
+        })
         result = node_fn(state)
-        # Node ran without error — revision notes were included in the message
         assert len(result["reviews"]) == 1
 
     def test_reviewer_node_agent_name_in_output(self):
@@ -202,24 +206,35 @@ class TestMetaNode:
         assert result["decision"] is not None
 
 
-class TestRefinementNode:
+class TestAuthorNode:
 
-    def test_refinement_node_sets_revision_notes(self):
+    def _fake_reviews(self) -> list[str]:
         agents = make_agents()
-        node_fn = GraphBuilder._refinement_node(agents[AgentName.REFINEMENT_AGENT])
+        reviews = []
+        for name in [AgentName.SOUNDNESS_REVIEWER, AgentName.PRESENTATION_REVIEWER, AgentName.CONTRIBUTION_REVIEWER]:
+            node = GraphBuilder._reviewer_node(agents[name])
+            out = node(base_state())
+            reviews.extend(out["reviews"])
+        return reviews
+
+    def test_author_node_sets_author_response(self):
+        agents = make_agents()
+        node_fn = GraphBuilder._author_node(agents[AgentName.AUTHOR_AGENT])
         meta = {"summary": "needs work", "decision": "minor_revision"}
-        state = base_state(meta_review=meta)
+        state = base_state(meta_review=meta, reviews=self._fake_reviews(), current_round=1)
         result = node_fn(state)
-        assert "revision_notes" in result
-        assert isinstance(result["revision_notes"], str)
-        assert len(result["revision_notes"]) > 0
+        assert "author_response" in result
+        assert isinstance(result["author_response"], dict)
+        assert "rebuttal" in result["author_response"]
+        assert "revised_sections" in result["author_response"]
 
-    def test_refinement_node_empty_meta_review(self):
+    def test_author_node_sets_revised_sections(self):
         agents = make_agents()
-        node_fn = GraphBuilder._refinement_node(agents[AgentName.REFINEMENT_AGENT])
-        state = base_state(meta_review=None)
+        node_fn = GraphBuilder._author_node(agents[AgentName.AUTHOR_AGENT])
+        state = base_state(meta_review=None, reviews=self._fake_reviews(), current_round=1)
         result = node_fn(state)
-        assert "revision_notes" in result
+        assert "revised_sections" in result
+        assert isinstance(result["revised_sections"], dict)
 
 
 # ---------------------------------------------------------------------------

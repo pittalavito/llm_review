@@ -19,7 +19,7 @@ class RunRecord(BaseModel):
     decision: str | None
     total_rounds: int
     meta_review: dict | None
-    revision_notes: str | None
+    author_response: dict | None
     retrieval_metadata: dict | None
     graph_config: dict
     agent_runs: list[AgentRun]

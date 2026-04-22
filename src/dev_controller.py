@@ -181,7 +181,7 @@ def run_graph(body: GraphRunRequest, container: Container = Depends(inject_conta
             "current_round": result.get("current_round"),
             "meta_review": result.get("meta_review"),
             "reviews": result.get("reviews", []),
-            "revision_notes": result.get("revision_notes"),
+            "author_response": result.get("author_response"),
             "retrieval_metadata": metadata,
         }
     except RuntimeError as exc:

@@ -14,7 +14,7 @@ from config import Config
 from container import Container
 from models.agent import AgentName, LlmModelName
 
-PAPER_PATH = "229_Chemical_Language_Models_H.pdf"
+PAPER_PATH = "2566_Robust_agents_learn_causa.pdf"
 
 
 # ---------------------------------------------------------------------------

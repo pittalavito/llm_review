@@ -20,14 +20,14 @@ from models.agent import (
     ContributionReviewResponse,
     PresentationReviewResponse,
     MetaReviewResponse,
-    RefinementResponse,
+    AuthorResponse,
 )
 from agent.base import BaseAgent
 from agent.impl.soundness_reviewer import SoundnessReviewerAgent
 from agent.impl.contribution_reviewer import ContributionReviewerAgent
 from agent.impl.presentation_reviewer import PresentationReviewerAgent
 from agent.impl.meta_reviewer import MetaReviewerAgent
-from agent.impl.refinement import RefinementAgent
+from agent.impl.author_agent import AuthorAgent
 from client.mock_chat import MockChatModel
 
 
@@ -248,10 +248,10 @@ class TestConcreteAgentsWithMock:
         result = agent.run("review this paper")
         assert isinstance(result.payload, MetaReviewResponse)
 
-    def test_refinement_returns_typed_payload(self, mock_llm):
-        agent = RefinementAgent(client=mock_llm)
-        result = agent.run("refine this paper")
-        assert isinstance(result.payload, RefinementResponse)
+    def test_author_agent_returns_typed_payload(self, mock_llm):
+        agent = AuthorAgent(client=mock_llm)
+        result = agent.run("respond to these reviews")
+        assert isinstance(result.payload, AuthorResponse)
 
     def test_soundness_reviewer_agent_name(self, mock_llm):
         agent = SoundnessReviewerAgent(client=mock_llm)

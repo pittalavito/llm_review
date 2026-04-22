@@ -50,7 +50,7 @@ class AgentName(StrEnum):
     PRESENTATION_REVIEWER = "presentation_reviewer"
     CONTRIBUTION_REVIEWER = "contribution_reviewer"
     META_REVIEWER = "meta_reviewer"
-    REFINEMENT_AGENT = "refinement_agent"
+    AUTHOR_AGENT = "author_agent"
 
 
 ##########################################################
@@ -118,11 +118,11 @@ class MetaReviewResponse(BaseModel):
     
     
 ###########################################################
-### REFINEMENT RESPONSE MODEL #############################
+### AUTHOR RESPONSE MODEL #################################
 ###########################################################
 
-class RefinementResponse(BaseModel):
-    """Synthesizes the critiques and produces concrete guidance for improving the paper."""
-    revision_summary: str = Field(min_length=1, max_length=2_000)
-    priority_changes: list[str] = Field(min_length=1, max_length=10)
-    suggested_improvements: list[str] = Field(min_length=1, max_length=10)
+class AuthorResponse(BaseModel):
+    """Author's rebuttal and revised paper sections in response to reviewer critiques."""
+    rebuttal: str = Field(min_length=1, max_length=2_000)
+    revised_sections: dict[str, str] = Field(default_factory=dict)
+    key_changes: list[str] = Field(min_length=1, max_length=10)

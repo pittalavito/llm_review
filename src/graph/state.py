@@ -18,8 +18,11 @@ class ReviewState(TypedDict):
     # Current decision: accept | minor_revision | major_revision | reject
     decision: str | None
 
-    # Revision notes produced by the refinement agent (overwritten each round)
-    revision_notes: str | None
+    # Author rebuttal and revised sections produced by the author agent (overwritten each round)
+    author_response: dict | None
+
+    # Revised paper sections extracted from author_response for easy injection into reviewers
+    revised_sections: dict | None
 
     # Current round counter (incremented by the meta-reviewer)
     current_round: int
