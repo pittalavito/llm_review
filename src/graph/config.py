@@ -15,7 +15,7 @@ class GraphAgentConfig(BaseModel):
 
     @staticmethod
     def default_config() -> "GraphAgentConfig":
-        _DEFAULT_MODEL = LlmModelName.OLLAMA_LLAMA32
+        _DEFAULT_MODEL = LlmModelName.MOCK
         _DEFAULT_TEMPERATURE = 0.1
         return GraphAgentConfig(
             agents=[
