@@ -10,6 +10,7 @@ from models.agent import (
     ContributionReviewResponse,
     MetaReviewResponse,
     PresentationReviewResponse,
+    RevisedSection,
     SoundnessReviewResponse,
 )
 
@@ -43,10 +44,10 @@ _MOCK_INSTANCES: dict[type[BaseModel], BaseModel] = {
     ),
     AuthorResponse: AuthorResponse(
         rebuttal="Ringraziamo i revisori per i commenti costruttivi. La metodologia è valida perché i nostri esperimenti sono stati condotti in modo rigoroso. Le sezioni indicate sono state riviste per chiarire i punti sollevati.",
-        revised_sections={
-            "methods": "La sezione dei metodi è stata ampliata con ulteriori dettagli sugli iperparametri e il protocollo di validazione.",
-            "results": "Abbiamo aggiunto un'analisi di sensitività completa e confronti aggiuntivi con le baseline più recenti.",
-        },
+        revised_sections=[
+            RevisedSection(section_name="methods", content="La sezione dei metodi è stata ampliata con ulteriori dettagli sugli iperparametri e il protocollo di validazione."),
+            RevisedSection(section_name="results", content="Abbiamo aggiunto un'analisi di sensitività completa e confronti aggiuntivi con le baseline più recenti."),
+        ],
         key_changes=["Aggiunta analisi di sensitività", "Dettagli iperparametri nella sezione metodi", "Confronto con baseline aggiuntive"],
     ),
 }

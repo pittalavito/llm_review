@@ -10,7 +10,7 @@ const AGENT_LABELS = {
   presentation_reviewer: '🎨 Presentation Reviewer',
   contribution_reviewer: '📐 Contribution Reviewer',
   meta_reviewer:         '📋 Meta Reviewer',
-  refinement_agent:      '✏️  Refinement Agent',
+  author_agent:          '✍️  Author Agent',
 };
 
 const DECISION_BADGE = {
@@ -143,7 +143,7 @@ function renderDetail(container, record) {
     </div>
     ${renderGraphConfig(record.graph_config)}
     ${roundsHtml}
-    ${record.revision_notes ? renderRevisionNotes(record.revision_notes) : ''}
+    ${record.author_response ? renderAuthorResponse(record.author_response) : ''}
   `;
 
   container.querySelector('#sto-back-btn').addEventListener('click', () => {
@@ -186,7 +186,7 @@ function renderRound(round, agentRuns) {
 function renderAgentTrace(ar) {
   const label   = AGENT_LABELS[ar.agent] || ar.agent;
   const payload = ar.response_payload || {};
-  const summary = payload.summary || payload.revision_summary || '';
+  const summary = payload.summary || payload.rebuttal || '';
   const score   = payload.soundness_score ?? payload.presentation_score ?? payload.contribution_score ?? null;
   const decision = payload.decision ?? null;
 
@@ -199,7 +199,7 @@ function renderAgentTrace(ar) {
 
   const strengthsHtml  = (payload.strengths  || []).map(s => `<li>${s}</li>`).join('');
   const weaknessesHtml = (payload.weaknesses || []).map(w => `<li>${w}</li>`).join('');
-  const changesHtml    = (payload.priority_changes || []).map(c => `<li>${c}</li>`).join('');
+  const changesHtml    = (payload.key_changes || payload.priority_changes || []).map(c => `<li>${c}</li>`).join('');
 
   return `
     <details class="sto-agent-trace">
@@ -236,11 +236,22 @@ function renderAgentTrace(ar) {
   `;
 }
 
-function renderRevisionNotes(notes) {
+function renderAuthorResponse(authorResponse) {
+  const rebuttal = authorResponse.rebuttal || '';
+  const keyChanges = (authorResponse.key_changes || []).map(c => `<li>${c}</li>`).join('');
+  const sections = authorResponse.revised_sections || [];
+  const revisedSections = sections.map(s => `
+      <details class="trace-section">
+        <summary>[Revised ${(s.section_name || '').toUpperCase()}]</summary>
+        <pre class="trace-pre">${escapeHtml(s.content || '')}</pre>
+      </details>
+    `).join('');
   return `
     <div class="sto-round">
-      <div class="sto-round-title">Revision Notes</div>
-      <p class="sto-revision-notes">${notes}</p>
+      <div class="sto-round-title">✍️ Author Response</div>
+      ${rebuttal ? `<p class="sto-revision-notes"><strong>Rebuttal:</strong> ${rebuttal}</p>` : ''}
+      ${keyChanges ? `<ul>${keyChanges}</ul>` : ''}
+      ${revisedSections}
     </div>
   `;
 }

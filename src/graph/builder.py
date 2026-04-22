@@ -63,10 +63,16 @@ class GraphBuilder:
                 if rebuttal:
                     message += f"\n\nAuthor rebuttal from the previous round:\n{rebuttal}"
                 if revised_sections:
-                    sections_text = "\n\n".join(
-                        f"[Revised {section.upper()}]\n{text}"
-                        for section, text in revised_sections.items()
-                    )
+                    if isinstance(revised_sections, list):
+                        sections_text = "\n\n".join(
+                            f"[Revised {s['section_name'].upper()}]\n{s['content']}"
+                            for s in revised_sections
+                        )
+                    else:
+                        sections_text = "\n\n".join(
+                            f"[Revised {section.upper()}]\n{text}"
+                            for section, text in revised_sections.items()
+                        )
                     message += f"\n\nRevised paper sections submitted by the author:\n{sections_text}"
 
             response = agent.run(message, paper_path=paper_path)
@@ -131,7 +137,7 @@ class GraphBuilder:
             )
             return {
                 "author_response": payload.model_dump(),
-                "revised_sections": payload.revised_sections,
+                "revised_sections": {s.section_name: s.content for s in payload.revised_sections},
                 "agent_runs": [agent_run.model_dump()],
             }
 

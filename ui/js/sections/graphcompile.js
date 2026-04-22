@@ -12,7 +12,7 @@ const AGENT_LABELS = {
   presentation_reviewer: '🎨 Presentation Reviewer',
   contribution_reviewer: '📐 Contribution Reviewer',
   meta_reviewer:         '📋 Meta Reviewer',
-  refinement_agent:      '✏️  Refinement Agent',
+  author_agent:          '✍️  Author Agent',
 };
 
 const AGENT_NAMES = Object.keys(AGENT_LABELS);

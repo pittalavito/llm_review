@@ -10,7 +10,7 @@ const AGENT_LABELS = {
   presentation_reviewer: '🎨 Presentation Reviewer',
   contribution_reviewer: '📐 Contribution Reviewer',
   meta_reviewer:         '📋 Meta Reviewer',
-  refinement_agent:      '✏️  Refinement Agent',
+  author_agent:          '✍️  Author Agent',
 };
 
 const AGENT_NAMES = Object.keys(AGENT_LABELS);
@@ -323,7 +323,7 @@ function renderResult(el, result) {
 
   body.innerHTML = `
     ${renderMetaSummary(result.meta_review || {})}
-    ${result.revision_notes ? renderRevisionNotes(result.revision_notes) : ''}
+    ${result.author_response ? renderAuthorResponse(result.author_response) : ''}
     ${renderReviewsList(result.reviews || [])}
   `;
 
@@ -344,11 +344,22 @@ function renderMetaSummary(meta) {
   `;
 }
 
-function renderRevisionNotes(notes) {
+function renderAuthorResponse(authorResponse) {
+  const rebuttal = authorResponse.rebuttal || '';
+  const keyChanges = (authorResponse.key_changes || []).map(c => `<li>${c}</li>`).join('');
+  const sections = authorResponse.revised_sections || [];
+  const revisedSections = sections.map(s => `
+      <details class="gr-revised-section">
+        <summary>[Revised ${(s.section_name || '').toUpperCase()}]</summary>
+        <p class="gr-block-text">${s.content || ''}</p>
+      </details>
+    `).join('');
   return `
     <div class="gr-block gr-block--notes">
-      <div class="gr-block-title">Revision Notes</div>
-      <p class="gr-block-text">${notes}</p>
+      <div class="gr-block-title">✍️ Author Response</div>
+      ${rebuttal ? `<p class="gr-block-text"><strong>Rebuttal:</strong> ${rebuttal}</p>` : ''}
+      ${keyChanges ? `<p><strong>Key changes:</strong></p><ul>${keyChanges}</ul>` : ''}
+      ${revisedSections}
     </div>
   `;
 }

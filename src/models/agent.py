@@ -121,8 +121,13 @@ class MetaReviewResponse(BaseModel):
 ### AUTHOR RESPONSE MODEL #################################
 ###########################################################
 
+class RevisedSection(BaseModel):
+    """A single revised paper section produced by the author."""
+    section_name: str
+    content: str
+
 class AuthorResponse(BaseModel):
     """Author's rebuttal and revised paper sections in response to reviewer critiques."""
     rebuttal: str = Field(min_length=1, max_length=2_000)
-    revised_sections: dict[str, str] = Field(default_factory=dict)
+    revised_sections: list[RevisedSection] = Field(default_factory=list)
     key_changes: list[str] = Field(min_length=1, max_length=10)
