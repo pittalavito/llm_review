@@ -27,7 +27,7 @@ class Config(BaseSettings):
     
     # --- App ---
     app_name: str = "llm-review"
-    app_version: str = "0.1.0"
+    app_version: str = APP_VERSION
     app_log_level: str = "INFO"
     llm_debug_json_logs: bool = False
 
