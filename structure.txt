@@ -1,2 +1,0 @@
-# Questo file è obsoleto — la struttura del progetto è documentata nel README.
-# Da eliminare.

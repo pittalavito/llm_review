@@ -15,7 +15,10 @@ class ReviewState(TypedDict):
     # Output of the meta-reviewer (overwritten each round)
     meta_review: dict | None
 
-    # Current decision: accept | minor_revision | major_revision | reject
+    # Output of the area chair — final binding decision (overwritten each round)
+    area_chair_response: dict | None
+
+    # Current decision: accept | minor_revision | major_revision | reject (set by area chair)
     decision: str | None
 
     # Author rebuttal and revised sections produced by the author agent (overwritten each round)

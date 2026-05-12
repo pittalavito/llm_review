@@ -3,6 +3,14 @@ from pydantic import BaseModel, Field, field_validator
 from models.agent import AgentName, LlmModelName
 from graph.config import GraphAgentConfig
 
+
+def _strip_nonempty(value: str, name: str) -> str:
+    stripped = value.strip()
+    if not stripped:
+        raise ValueError(f"{name} must not be empty.")
+    return stripped
+
+
 class TestLlmRequest(BaseModel):
     model: LlmModelName
     temperature: float = Field(default=1, ge=0, le=1)
@@ -11,26 +19,11 @@ class TestLlmRequest(BaseModel):
     @field_validator("message")
     @classmethod
     def validate_message(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("Message must not be empty.")
-        return stripped
-    
-    
-# extend TestLlmRequest?
+        return _strip_nonempty(value, "Message")
+
+
 class TestAgentRequest(TestLlmRequest):
     name: AgentName
-    model: LlmModelName
-    temperature: float = Field(default=1, ge=0, le=1)
-    message: str = Field(min_length=1, max_length=8_000)
-
-    @field_validator("message")
-    @classmethod
-    def validate_message(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("Message must not be empty.")
-        return stripped
 
 
 class PreviewPromptRequest(BaseModel):
@@ -40,10 +33,7 @@ class PreviewPromptRequest(BaseModel):
     @field_validator("message")
     @classmethod
     def validate_message(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("Message must not be empty.")
-        return stripped
+        return _strip_nonempty(value, "Message")
 
 
 class IndexPaperRequest(BaseModel):
@@ -53,10 +43,7 @@ class IndexPaperRequest(BaseModel):
     @field_validator("paper_path")
     @classmethod
     def validate_path(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("Paper path must not be empty.")
-        return stripped
+        return _strip_nonempty(value, "Paper path")
 
 
 class TestAgentWithRetrievalRequest(BaseModel):
@@ -70,18 +57,12 @@ class TestAgentWithRetrievalRequest(BaseModel):
     @field_validator("message")
     @classmethod
     def validate_message(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("Message must not be empty.")
-        return stripped
+        return _strip_nonempty(value, "Message")
 
     @field_validator("paper_path")
     @classmethod
     def validate_path(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("Paper path must not be empty.")
-        return stripped
+        return _strip_nonempty(value, "Paper path")
 
 
 class PreviewPromptResponse(BaseModel):
@@ -100,9 +81,4 @@ class GraphRunRequest(BaseModel):
     @field_validator("paper_path")
     @classmethod
     def validate_path(cls, value: str) -> str:
-        stripped = value.strip()
-        if not stripped:
-            raise ValueError("Paper path must not be empty.")
-        return stripped
-
-
+        return _strip_nonempty(value, "Paper path")

@@ -78,13 +78,13 @@ class TestContainer:
         assert isinstance(container.list_indexed_papers(), list)
 
     def test_build_agent_prompt_returns_dict(self, container):
-        result = container.build_agent_prompt(AgentName.SOUNDNESS_REVIEWER, "test message")
+        result = container.build_agent_prompt(AgentName.REVIEWER_1, "test message")
         assert "system_prompt" in result
         assert "full_prompt" in result
 
     def test_test_agent_with_mock_returns_response(self, container):
         assert container.test_agent(
-            AgentName.SOUNDNESS_REVIEWER, LlmModelName.MOCK, 0.0, "review this paper"
+            AgentName.REVIEWER_1, LlmModelName.MOCK, 0.0, "review this paper"
         ) is not None
 
     def test_compile_graph_is_idempotent(self, container):
@@ -120,10 +120,10 @@ class TestAgentServiceClientFactory:
         with pytest.raises(ValueError, match="ANTHROPIC"):
             svc.init_client(LlmModelName.ANTHROPIC_CLAUDE_SONNET, 0.0)
 
-    def test_get_agent_class_soundness(self):
+    def test_get_agent_class_reviewer(self):
         from service.agent_service import AgentService
-        from agent.impl.soundness_reviewer import SoundnessReviewerAgent
-        assert AgentService.get_agent_class(AgentName.SOUNDNESS_REVIEWER) is SoundnessReviewerAgent
+        from agent.impl.reviewer_agent import ReviewerAgent
+        assert AgentService.get_agent_class(AgentName.REVIEWER_1) is ReviewerAgent
 
     def test_get_agent_class_unknown_raises(self):
         from service.agent_service import AgentService
@@ -135,7 +135,7 @@ class TestAgentServiceClientFactory:
         from models.agent import AgentResponse
         svc = AgentService(config)
         assert isinstance(
-            svc.run_agent(AgentName.SOUNDNESS_REVIEWER, LlmModelName.MOCK, 0.0, "analyse this"),
+            svc.run_agent(AgentName.REVIEWER_1, LlmModelName.MOCK, 0.0, "analyse this"),
             AgentResponse,
         )
 

@@ -1,37 +1,35 @@
 import logging
 
-from config import Config
-
 from threading import RLock
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_ollama import ChatOllama
-from langchain_anthropic import ChatAnthropic
-from langchain_openai import ChatOpenAI
 
-from client.mock_chat import MockChatModel
-from graph.config import GraphAgentConfig
-from service.retrieval_context_provider import RetrievalContextProvider
-from models.agent import AgentName, AgentResponse, LlmModelName
+from langchain_core.language_models.chat_models import BaseChatModel
+
 from agent.base import BaseAgent
-from agent.impl.contribution_reviewer import ContributionReviewerAgent
-from agent.impl.meta_reviewer import MetaReviewerAgent
-from agent.impl.presentation_reviewer import PresentationReviewerAgent
+from agent.impl.area_chair_agent import AreaChairAgent
 from agent.impl.author_agent import AuthorAgent
-from agent.impl.soundness_reviewer import SoundnessReviewerAgent
+from agent.impl.meta_reviewer import MetaReviewerAgent
+from agent.impl.reviewer_agent import ReviewerAgent
+from client.factory import CLIENT_FACTORIES
+from config import Config
+from graph.config import GraphAgentConfig
+from models.agent import AgentName, AgentResponse, AreaChairStyle, LlmModelName, ReviewerPersona
+from service.retrieval_context_provider import RetrievalContextProvider
 
 
 logger = logging.getLogger(__name__)
 
 _LOGGER_PREFIX = "[AgentService]"
 
-_REGISTRY: dict[AgentName, type[BaseAgent]] = {
-    AgentName.SOUNDNESS_REVIEWER: SoundnessReviewerAgent,
-    AgentName.PRESENTATION_REVIEWER: PresentationReviewerAgent,
-    AgentName.CONTRIBUTION_REVIEWER: ContributionReviewerAgent,
-    AgentName.META_REVIEWER: MetaReviewerAgent,
-    AgentName.AUTHOR_AGENT: AuthorAgent,
-}
+_REVIEWER_NAMES = {AgentName.REVIEWER_1, AgentName.REVIEWER_2, AgentName.REVIEWER_3}
 
+_AGENT_CLASSES: dict[AgentName, type[BaseAgent]] = {
+    AgentName.REVIEWER_1: ReviewerAgent,
+    AgentName.REVIEWER_2: ReviewerAgent,
+    AgentName.REVIEWER_3: ReviewerAgent,
+    AgentName.META_REVIEWER: MetaReviewerAgent,
+    AgentName.AREA_CHAIR: AreaChairAgent,
+    AgentName.AUTHOR_AGENT:  AuthorAgent,
+}
 
 class AgentService:
 
@@ -39,116 +37,106 @@ class AgentService:
         self.config = config
         self._cache_lock = RLock()
         self._client_cache: dict[tuple[LlmModelName, float], BaseChatModel] = {}
-        self._agent_cache: dict[tuple[AgentName, LlmModelName, float], BaseAgent] = {}
-
+        self._agent_cache: dict[tuple, BaseAgent] = {}
 
     def init_client(self, model: LlmModelName, temperature: float) -> BaseChatModel:
         key = (model, self._normalize_temperature(temperature))
         if key in self._client_cache:
-            logger.info(f"{_LOGGER_PREFIX} Client cache hit for model={model}, temperature={temperature}")
+            logger.info(f"{_LOGGER_PREFIX} Client cache hit model={model} temp={key[1]}")
             return self._client_cache[key]
         with self._cache_lock:
-            if key in self._client_cache:
-                logger.info(f"{_LOGGER_PREFIX} Client cache hit for model={model}, temperature={temperature}")
-                return self._client_cache[key]
-            client = self._create_client(model, key[1], self.config)
-            self._client_cache[key] = client
-            return client
+            if key not in self._client_cache:
+                self._client_cache[key] = self._create_client(model, key[1])
+            return self._client_cache[key]
 
-
-    def init_agent(self, name: AgentName, model: LlmModelName, temperature: float, retrieval_service=None, top_k: int | None = None) -> BaseAgent:
-        key = (name, model, self._normalize_temperature(temperature))
+    def init_agent(
+        self,
+        name: AgentName,
+        model: LlmModelName,
+        temperature: float,
+        retrieval_service=None,
+        top_k: int | None = None,
+        reviewer_persona: ReviewerPersona | None = None,
+        area_chair_style: AreaChairStyle | None = None,
+    ) -> BaseAgent:
+        key = self._agent_cache_key(name, model, temperature, reviewer_persona, area_chair_style)
         if key in self._agent_cache:
-            logger.info(f"{_LOGGER_PREFIX} Agent cache hit for name={name}, model={model}, temperature={temperature}")
+            logger.info(f"{_LOGGER_PREFIX} Agent cache hit name={name} model={model}")
             return self._agent_cache[key]
+
         with self._cache_lock:
             if key in self._agent_cache:
-                logger.info(f"{_LOGGER_PREFIX} Agent cache hit for name={name}, model={model}, temperature={temperature}")
                 return self._agent_cache[key]
             client = self.init_client(model, temperature)
-            context_provider = self._build_context_provider(self.get_agent_class(name), retrieval_service)  
-            agent_class = self.get_agent_class(name)
-            agent = agent_class(client=client, context_provider=context_provider)
+            agent = self._build_agent(name, client, reviewer_persona, area_chair_style)
+            agent._context_provider = self._build_context_provider(type(agent), retrieval_service, agent)
             self._agent_cache[key] = agent
             return agent
 
-
     def init_agents_from_graph_config(self, agents_config: GraphAgentConfig, retrieval_service=None) -> dict[AgentName, BaseAgent]:
-        agents = {}
-        for a in agents_config.agents:
-            agent = self.init_agent(a.agent_name, a.model, a.temperature, retrieval_service)
-            agents[a.agent_name] = agent
-        return agents    
-
+        return {
+            a.agent_name: self.init_agent(
+                a.agent_name, a.model, a.temperature, retrieval_service,
+                reviewer_persona=a.reviewer_persona,
+                area_chair_style=a.area_chair_style,
+            )
+            for a in agents_config.agents
+        }
 
     def invoke_client(self, model: LlmModelName, temperature: float, message: str) -> str:
-        client = self.init_client(model, temperature)
-        return client.invoke(message).content
-
+        return self.init_client(model, temperature).invoke(message).content
 
     def run_agent(self, name: AgentName, model: LlmModelName, temperature: float, message: str) -> AgentResponse:
-        agent = self.init_agent(name, model, temperature)
-        return agent.run(message)
-
+        return self.init_agent(name, model, temperature).run(message)
 
     @staticmethod
     def get_agent_class(name: AgentName) -> type[BaseAgent]:
-        agent_class = _REGISTRY.get(name)
-        if agent_class is None:
-            raise ValueError(f"Unsupported agent name: {name}")
-        return agent_class
+        try:
+            return _AGENT_CLASSES[name]
+        except KeyError as exc:
+            raise ValueError(f"Unsupported agent name: {name}") from exc
 
-
-    @staticmethod
-    def _normalize_temperature(temperature: float) -> float:
+    def _normalize_temperature(self, temperature: float) -> float:
         return round(float(temperature), 3)
 
+    def _agent_cache_key(self, name, model, temperature, persona, style) -> tuple:
+        persona_key = (
+            (persona.commitment, persona.intention, persona.knowledgeability, persona.focus)
+            if persona else None
+        )
+        return (name, model, self._normalize_temperature(temperature), persona_key, style)
 
-    @staticmethod
-    def _create_client(model: LlmModelName, temperature: float, config: Config) -> BaseChatModel:
-        if model.is_mock():
-            return MockChatModel()
+    def _build_agent(self, name: AgentName, client: BaseChatModel, persona: ReviewerPersona | None, style: AreaChairStyle | None) -> BaseAgent:
+        agent_class = self.get_agent_class(name)
+        if name in _REVIEWER_NAMES:
+            return agent_class(client=client, agent_name=name, persona=persona)
+        if name == AgentName.AREA_CHAIR and style is not None:
+            return agent_class(client=client, style=style)
+        return agent_class(client=client)
 
-        if model.is_ollama():
-            logger.info(f"{_LOGGER_PREFIX} Initializing Ollama client with model={model}, temperature={temperature}")
-            return ChatOllama(
-                model=model,
-                base_url=config.ollama_url,
-                temperature=temperature,
-                num_predict=config.ollama_num_predict,
-                keep_alive=config.ollama_keep_alive,
-            )
-
-        if model.is_openai():
-            if not config.openai_api_key:
-                raise ValueError("OPENAI_API_KEY not configured.")
-            logger.info(f"{_LOGGER_PREFIX} Initializing OpenAI client with model={model}, temperature={temperature}")
-            return ChatOpenAI(
-                model=model,
-                api_key=config.openai_api_key,
-                temperature=temperature,
-            )
-
-        if model.is_anthropic():
-            if not config.anthropic_api_key:
-                raise ValueError("ANTHROPIC_API_KEY not configured.")
-            logger.info(f"{_LOGGER_PREFIX} Initializing Anthropic client with model={model}, temperature={temperature}")
-            return ChatAnthropic(
-                model=model,
-                api_key=config.anthropic_api_key,
-                temperature=temperature,
-            )
-
+    def _create_client(self, model: LlmModelName, temperature: float) -> BaseChatModel:
+        for predicate, factory in CLIENT_FACTORIES:
+            if predicate(model):
+                logger.info(f"{_LOGGER_PREFIX} Building {factory.__name__} model={model} temp={temperature}")
+                return factory(model, temperature, self.config)
         raise ValueError(f"Unsupported LLM model: {model}")
 
+    def _build_context_provider(
+        self,
+        agent_class: type[BaseAgent],
+        retrieval_service,
+        agent_instance: BaseAgent | None = None,
+    ) -> RetrievalContextProvider | None:
+        if agent_class.RAG_QUERY == "" or retrieval_service is None:
+            return None
 
-    def _build_context_provider(self, agent_class: type[BaseAgent], retrieval_service) -> RetrievalContextProvider | None:
-        if agent_class.RAG_QUERY and retrieval_service:
-            logger.info(f"{_LOGGER_PREFIX} Building RetrievalContextProvider for agent_class={agent_class.__name__}")
-            return RetrievalContextProvider(
-                retrieval_service=retrieval_service,
-                query=agent_class.RAG_QUERY,
-                sections=agent_class.RAG_SECTIONS,
-            )
-        logger.info(f"{_LOGGER_PREFIX} No context provider needed for agent_class={agent_class.__name__}")
-        return None
+        focus_terms = getattr(agent_instance, "rag_focus_terms", "") if agent_instance else ""
+        focus_sections = getattr(agent_instance, "rag_focus_sections", []) if agent_instance else []
+        sections = focus_sections or agent_class.RAG_SECTIONS
+
+        return RetrievalContextProvider(
+            retrieval_service=retrieval_service,
+            query=agent_class.RAG_QUERY,
+            sections=sections,
+            query_suffix=focus_terms
+        )

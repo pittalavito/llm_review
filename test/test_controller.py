@@ -119,7 +119,7 @@ class TestAgentsEndpoint:
 
     def test_test_agent_with_mock_returns_200(self, client):
         r = client.post("/dev/agents", json={
-            "name": AgentName.SOUNDNESS_REVIEWER,
+            "name": AgentName.REVIEWER_1,
             "model": LlmModelName.MOCK,
             "temperature": 0.0,
             "message": "review this paper",
@@ -138,7 +138,7 @@ class TestAgentsEndpoint:
     def test_test_agent_error_returns_500(self, client):
         with patch("container.Container.test_agent", side_effect=RuntimeError("boom")):
             r = client.post("/dev/agents", json={
-                "name": AgentName.SOUNDNESS_REVIEWER,
+                "name": AgentName.REVIEWER_1,
                 "model": LlmModelName.MOCK,
                 "temperature": 0.0,
                 "message": "test",
@@ -147,14 +147,14 @@ class TestAgentsEndpoint:
 
     def test_prompt_preview_returns_200(self, client):
         r = client.post("/dev/agents/prompt-preview", json={
-            "name": AgentName.SOUNDNESS_REVIEWER,
+            "name": AgentName.REVIEWER_1,
             "message": "review this paper",
         })
         assert r.status_code == 200
 
     def test_prompt_preview_has_full_prompt(self, client):
         r = client.post("/dev/agents/prompt-preview", json={
-            "name": AgentName.SOUNDNESS_REVIEWER,
+            "name": AgentName.REVIEWER_1,
             "message": "review this paper",
         })
         assert "full_prompt" in r.json()
@@ -162,14 +162,14 @@ class TestAgentsEndpoint:
     def test_prompt_preview_error_returns_500(self, client):
         with patch("container.Container.build_agent_prompt", side_effect=RuntimeError("boom")):
             r = client.post("/dev/agents/prompt-preview", json={
-                "name": AgentName.SOUNDNESS_REVIEWER,
+                "name": AgentName.REVIEWER_1,
                 "message": "test",
             })
         assert r.status_code == 500
 
     def test_agent_with_retrieval_returns_200(self, client):
         r = client.post("/dev/agents/retrieval", json={
-            "name": AgentName.SOUNDNESS_REVIEWER,
+            "name": AgentName.REVIEWER_1,
             "model": LlmModelName.MOCK,
             "temperature": 0.0,
             "message": "review this",
@@ -180,7 +180,7 @@ class TestAgentsEndpoint:
     def test_agent_with_retrieval_value_error_returns_400(self, client):
         with patch("container.Container.test_agent_with_retrieval", side_effect=ValueError("bad paper")):
             r = client.post("/dev/agents/retrieval", json={
-                "name": AgentName.SOUNDNESS_REVIEWER,
+                "name": AgentName.REVIEWER_1,
                 "model": LlmModelName.MOCK,
                 "temperature": 0.0,
                 "message": "review this",
@@ -191,7 +191,7 @@ class TestAgentsEndpoint:
     def test_agent_with_retrieval_error_returns_500(self, client):
         with patch("container.Container.test_agent_with_retrieval", side_effect=RuntimeError("boom")):
             r = client.post("/dev/agents/retrieval", json={
-                "name": AgentName.SOUNDNESS_REVIEWER,
+                "name": AgentName.REVIEWER_1,
                 "model": LlmModelName.MOCK,
                 "temperature": 0.0,
                 "message": "test",

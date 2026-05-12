@@ -42,18 +42,36 @@ function formatAgentResponse(data) {
     sections.push(`Summary\n${summary}`);
   }
 
-  const strengths = formatList('Strengths', payload.strengths);
-  if (strengths) sections.push(strengths);
+  if (payload.significance_and_novelty) {
+    sections.push(`Significance & Novelty\n${asText(payload.significance_and_novelty)}`);
+  }
 
-  const weaknesses = formatList('Weaknesses', payload.weaknesses);
-  if (weaknesses) sections.push(weaknesses);
+  const acceptance = formatList('Reasons for Acceptance', payload.reasons_for_acceptance);
+  if (acceptance) sections.push(acceptance);
 
-  const recommendations = formatList('Recommendations', payload.recommendations);
-  if (recommendations) sections.push(recommendations);
+  const rejection = formatList('Reasons for Rejection', payload.reasons_for_rejection);
+  if (rejection) sections.push(rejection);
+
+  const suggestions = formatList('Suggestions', payload.suggestions);
+  if (suggestions) sections.push(suggestions);
+
+  if (payload.rating != null) {
+    sections.push(`Rating\n${payload.rating}/10`);
+  }
 
   const confidence = asText(payload.confidence);
   if (confidence) {
-    sections.push(`Confidence\n${confidence}`);
+    sections.push(`Confidence\n${confidence}/5`);
+  }
+
+  if (payload.recommendation) {
+    sections.push(`Recommendation\n${payload.recommendation}`);
+  }
+  if (payload.decision) {
+    sections.push(`Decision\n${payload.decision}`);
+  }
+  if (payload.justification) {
+    sections.push(`Justification\n${asText(payload.justification)}`);
   }
 
   if (sections.length === 1) {

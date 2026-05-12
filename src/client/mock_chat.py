@@ -1,4 +1,5 @@
-from typing import Any, Iterator
+from typing import Any
+
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
@@ -6,49 +7,48 @@ from langchain_core.runnables import RunnableLambda
 from pydantic import BaseModel
 
 from models.agent import (
+    AreaChairResponse,
     AuthorResponse,
-    ContributionReviewResponse,
     MetaReviewResponse,
-    PresentationReviewResponse,
+    ReviewerRebuttal,
+    ReviewerResponse,
     RevisedSection,
-    SoundnessReviewResponse,
 )
 
+
 _MOCK_INSTANCES: dict[type[BaseModel], BaseModel] = {
-    SoundnessReviewResponse: SoundnessReviewResponse(
-        summary="Il paper presenta una metodologia solida con esperimenti ben strutturati.",
-        strengths=["Protocollo sperimentale chiaro", "Risultati ripetibili"],
-        weaknesses=["Analisi di sensitività limitata", "Mancano dettagli sugli iperparametri"],
-        soundness_score=3,
+    ReviewerResponse: ReviewerResponse(
+        summary="Solid approach, clear experiments, reasonable scope.",
+        significance_and_novelty="Original contribution with respect to prior art.",
+        reasons_for_acceptance=["Rigorous methodology", "Convincing results", "Clear presentation"],
+        reasons_for_rejection=["Limited sensitivity analysis", "Weak baseline coverage"],
+        suggestions=["Add ablation study", "Expand related work"],
+        rating=6,
         confidence=4,
-    ),
-    PresentationReviewResponse: PresentationReviewResponse(
-        summary="Il paper è scritto in modo chiaro ma alcune sezioni potrebbero essere semplificate.",
-        strengths=["Abstract ben strutturato", "Figure informative"],
-        weaknesses=["Sezione related work troppo densa", "Alcuni grafici poco leggibili"],
-        presentation_score=3,
-        confidence=4,
-    ),
-    ContributionReviewResponse: ContributionReviewResponse(
-        summary="Il contributo è originale e rilevante per la comunità, ma non rivoluzionario.",
-        strengths=["Approccio novel al problema", "Benchmark su dataset standard"],
-        weaknesses=["Comparazione con baseline limitata", "Applicabilità non discussa"],
-        contribution_score=3,
-        confidence=3,
     ),
     MetaReviewResponse: MetaReviewResponse(
-        summary="Il paper ha basi solide ma richiede revisioni prima dell'accettazione.",
-        key_points=["Metodologia valida", "Presentazione migliorabile", "Contributo interessante ma non definitivo"],
-        overall_score=3,
+        summary="Solid foundations but revisions needed before acceptance.",
+        key_points=["Methodology valid", "Presentation improvable", "Contribution interesting"],
+        overall_score=6,
+        recommendation="minor_revision",
+    ),
+    AreaChairResponse: AreaChairResponse(
+        summary="Reviewer concerns are moderate and addressable; minor revision required.",
+        justification="Contribution is valid; concerns can be addressed with limited rework.",
         decision="minor_revision",
+        confidence=4,
     ),
     AuthorResponse: AuthorResponse(
-        rebuttal="Ringraziamo i revisori per i commenti costruttivi. La metodologia è valida perché i nostri esperimenti sono stati condotti in modo rigoroso. Le sezioni indicate sono state riviste per chiarire i punti sollevati.",
-        revised_sections=[
-            RevisedSection(section_name="methods", content="La sezione dei metodi è stata ampliata con ulteriori dettagli sugli iperparametri e il protocollo di validazione."),
-            RevisedSection(section_name="results", content="Abbiamo aggiunto un'analisi di sensitività completa e confronti aggiuntivi con le baseline più recenti."),
+        rebuttal="We thank the reviewers; revisions address all major concerns.",
+        reviewer_rebuttals=[
+            ReviewerRebuttal(reviewer_name=f"reviewer_{i}", response=f"Targeted response to reviewer {i}.")
+            for i in (1, 2, 3)
         ],
-        key_changes=["Aggiunta analisi di sensitività", "Dettagli iperparametri nella sezione metodi", "Confronto con baseline aggiuntive"],
+        revised_sections=[
+            RevisedSection(section_name="methods", content="Expanded methods section with hyperparameters."),
+            RevisedSection(section_name="results", content="Added sensitivity analysis and extra baselines."),
+        ],
+        key_changes=["Sensitivity analysis", "Hyperparameter details", "Additional baselines"],
     ),
 }
 
@@ -75,9 +75,10 @@ class MockChatModel(BaseChatModel):
             return RunnableLambda(lambda _: instance)
         return super().with_structured_output(schema, **kwargs)
 
-    def _pick_json(self, messages: list[BaseMessage]) -> str:
+    @staticmethod
+    def _pick_json(messages: list[BaseMessage]) -> str:
         combined = " ".join(str(m.content) for m in messages)
-        for schema, json_str in _MOCK_JSON.items():
+        for schema, payload in _MOCK_JSON.items():
             if schema.__name__ in combined:
-                return json_str
+                return payload
         return "{}"

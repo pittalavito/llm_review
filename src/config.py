@@ -45,6 +45,6 @@ class Config(BaseSettings):
     # --- Retrieval ---
     rag_chunk_size: int = 800
     rag_chunk_overlap: int = 150
-    rag_top_k_default: int = 6
+    rag_top_k_default: int = 10
     rag_max_context_chars: int = 12_000
-    rag_strategy_version: str = "bm25-v2-section"
+    rag_strategy_version: str = "bm25-v3-section"

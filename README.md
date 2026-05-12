@@ -64,7 +64,7 @@ All scripts are cross-platform Python. Run them with `uv run python scripts/<nam
 |---|---|---|
 | start-venv | `uv run python scripts/start-venv.py` | Create `.venv` and install all dependencies |
 | run-app | `uv run python scripts/run-app.py` | Sync deps and start uvicorn on port 8080 |
-| run-test | `uv run python scripts/run-test.py` | Sync dev deps and run pytest |
+| run-test | `uv run python scripts/run-test.py` | Sync dev deps and run pytest with terminal coverage |
 | stop-app | `uv run python scripts/stop-app.py` | Kill the running uvicorn process |
 | stop-app (preview) | `uv run python scripts/stop-app.py --preview` | Show which process would be killed |
 | clean-cache | `uv run python scripts/clean-cache.py` | Remove `__pycache__`, `.pytest_cache`, `.pyc/.pyo` |

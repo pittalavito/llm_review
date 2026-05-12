@@ -6,11 +6,12 @@
 import { listRuns, getRun } from '../api.js';
 
 const AGENT_LABELS = {
-  soundness_reviewer:    '🔬 Soundness Reviewer',
-  presentation_reviewer: '🎨 Presentation Reviewer',
-  contribution_reviewer: '📐 Contribution Reviewer',
-  meta_reviewer:         '📋 Meta Reviewer',
-  author_agent:          '✍️  Author Agent',
+  reviewer_1:    '🔬 Reviewer 1',
+  reviewer_2:    '🔬 Reviewer 2',
+  reviewer_3:    '🔬 Reviewer 3',
+  meta_reviewer: '📋 Meta Reviewer',
+  area_chair:    '🪑 Area Chair',
+  author_agent:  '✍️  Author Agent',
 };
 
 const DECISION_BADGE = {
@@ -155,18 +156,28 @@ function renderGraphConfig(config) {
   if (!config) return '';
   const agents  = config.agents || [];
   const maxRounds = config.max_rounds ?? '?';
-  const rows = agents.map(a => `
+  const rows = agents.map(a => {
+    let persona = '';
+    if (a.reviewer_persona) {
+      const p = a.reviewer_persona;
+      persona = `${p.commitment} · ${p.intention} · ${p.knowledgeability}`;
+    } else if (a.area_chair_style) {
+      persona = a.area_chair_style;
+    }
+    return `
     <tr>
       <td>${AGENT_LABELS[a.agent_name] || a.agent_name}</td>
       <td><code>${a.model}</code></td>
       <td>${a.temperature}</td>
+      <td class="muted">${persona}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
   return `
     <details class="sto-config-block">
       <summary class="sto-config-summary">⚙️ Configurazione agenti · max rounds: ${maxRounds}</summary>
       <table class="sto-config-table">
-        <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th></tr></thead>
+        <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th><th>Persona / Style</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </details>
@@ -187,8 +198,10 @@ function renderAgentTrace(ar) {
   const label   = AGENT_LABELS[ar.agent] || ar.agent;
   const payload = ar.response_payload || {};
   const summary = payload.summary || payload.rebuttal || '';
-  const score   = payload.soundness_score ?? payload.presentation_score ?? payload.contribution_score ?? null;
+  const rating  = payload.rating ?? null;
+  const recommendation = payload.recommendation ?? null;
   const decision = payload.decision ?? null;
+  const displayDecision = recommendation || decision;
 
   const contextSection = ar.context_used
     ? `<details class="trace-section">
@@ -197,16 +210,21 @@ function renderAgentTrace(ar) {
        </details>`
     : `<div class="trace-section trace-section--empty">Nessun contesto RAG.</div>`;
 
-  const strengthsHtml  = (payload.strengths  || []).map(s => `<li>${s}</li>`).join('');
-  const weaknessesHtml = (payload.weaknesses || []).map(w => `<li>${w}</li>`).join('');
-  const changesHtml    = (payload.key_changes || payload.priority_changes || []).map(c => `<li>${c}</li>`).join('');
+  const acceptanceHtml = (payload.reasons_for_acceptance || []).map(s => `<li>${s}</li>`).join('');
+  const rejectionHtml  = (payload.reasons_for_rejection  || []).map(w => `<li>${w}</li>`).join('');
+  const suggestionsHtml = (payload.suggestions || []).map(s => `<li>${s}</li>`).join('');
+  const changesHtml    = (payload.key_changes || []).map(c => `<li>${c}</li>`).join('');
+
+  const decisionBadge = displayDecision
+    ? `<span class="badge badge--sm ${(DECISION_BADGE[displayDecision] || {cls:''}).cls}">${displayDecision}</span>`
+    : '';
 
   return `
     <details class="sto-agent-trace">
       <summary class="sto-agent-summary">
         <span>${label}</span>
-        ${score !== null   ? `<span class="gr-score">${score}/5</span>` : ''}
-        ${decision !== null ? `<span class="badge badge--sm ${(DECISION_BADGE[decision] || {cls:''}).cls}">${decision}</span>` : ''}
+        ${rating !== null ? `<span class="gr-score">${rating}/10</span>` : ''}
+        ${decisionBadge}
       </summary>
       <div class="sto-agent-body">
 
@@ -221,13 +239,16 @@ function renderAgentTrace(ar) {
           <summary>✅ Risposta</summary>
           <div class="trace-response">
             ${summary ? `<p><strong>Summary:</strong> ${summary}</p>` : ''}
-            ${score !== null ? `<p><strong>Score:</strong> ${score}/5</p>` : ''}
+            ${payload.significance_and_novelty ? `<p><strong>Significance &amp; Novelty:</strong> ${payload.significance_and_novelty}</p>` : ''}
+            ${rating !== null ? `<p><strong>Rating:</strong> ${rating}/10</p>` : ''}
             ${payload.confidence != null ? `<p><strong>Confidence:</strong> ${payload.confidence}/5</p>` : ''}
-            ${decision ? `<p><strong>Decision:</strong> ${decision}</p>` : ''}
-            ${strengthsHtml  ? `<p><strong>Strengths:</strong></p><ul>${strengthsHtml}</ul>`   : ''}
-            ${weaknessesHtml ? `<p><strong>Weaknesses:</strong></p><ul>${weaknessesHtml}</ul>` : ''}
-            ${changesHtml    ? `<p><strong>Priority changes:</strong></p><ul>${changesHtml}</ul>` : ''}
-            ${!summary && !score && !decision && !strengthsHtml ? `<pre class="trace-pre">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>` : ''}
+            ${displayDecision ? `<p><strong>Decision/Recommendation:</strong> ${displayDecision}</p>` : ''}
+            ${payload.justification ? `<p><strong>Justification:</strong> ${payload.justification}</p>` : ''}
+            ${acceptanceHtml ? `<p><strong>Reasons for acceptance:</strong></p><ul>${acceptanceHtml}</ul>` : ''}
+            ${rejectionHtml  ? `<p><strong>Reasons for rejection:</strong></p><ul>${rejectionHtml}</ul>` : ''}
+            ${suggestionsHtml ? `<p><strong>Suggestions:</strong></p><ul>${suggestionsHtml}</ul>` : ''}
+            ${changesHtml    ? `<p><strong>Key changes:</strong></p><ul>${changesHtml}</ul>` : ''}
+            ${!summary && rating === null && !displayDecision && !acceptanceHtml ? `<pre class="trace-pre">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>` : ''}
           </div>
         </details>
 
@@ -246,11 +267,18 @@ function renderAuthorResponse(authorResponse) {
         <pre class="trace-pre">${escapeHtml(s.content || '')}</pre>
       </details>
     `).join('');
+  const rebuttals = (authorResponse.reviewer_rebuttals || []).map(r => `
+      <details class="trace-section">
+        <summary>${r.reviewer_name}</summary>
+        <p>${escapeHtml(r.response || '')}</p>
+      </details>
+    `).join('');
   return `
     <div class="sto-round">
       <div class="sto-round-title">✍️ Author Response</div>
-      ${rebuttal ? `<p class="sto-revision-notes"><strong>Rebuttal:</strong> ${rebuttal}</p>` : ''}
-      ${keyChanges ? `<ul>${keyChanges}</ul>` : ''}
+      ${rebuttal ? `<p class="sto-revision-notes"><strong>General Rebuttal:</strong> ${rebuttal}</p>` : ''}
+      ${rebuttals ? `<p><strong>Per-Reviewer Rebuttals:</strong></p>${rebuttals}` : ''}
+      ${keyChanges ? `<p><strong>Key Changes:</strong></p><ul>${keyChanges}</ul>` : ''}
       ${revisedSections}
     </div>
   `;

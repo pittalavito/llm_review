@@ -18,7 +18,9 @@ class RunRecord(BaseModel):
     paper_path: str
     decision: str | None
     total_rounds: int
+    reviews: list[str] | None = None
     meta_review: dict | None
+    area_chair_response: dict | None = None
     author_response: dict | None
     retrieval_metadata: dict | None
     graph_config: dict

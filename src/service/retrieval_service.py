@@ -88,6 +88,33 @@ class RetrievalService:
         )
 
 
+    def extract_abstract(self, paper_path: str) -> str:
+        """Return the abstract text from the paper's BM25 index.
+
+        Used as a dynamic BM25 query so retrieval is grounded in the paper's own
+        vocabulary rather than a generic keyword list.  Falls back to the first
+        non-preamble chunk when no abstract section is found (e.g. arXiv papers
+        whose abstract is not labelled explicitly).
+        """
+        _, relative_path = self._file_adapter.resolve_paper_path(paper_path)
+        doc_id = self._index_repository.compute_doc_id(relative_path)
+        index_payload = self._index_repository.load(doc_id)
+
+        if index_payload is None:
+            return ""
+
+        abstract_chunks = [c for c in index_payload.chunks if c.section == "abstract"]
+        if abstract_chunks:
+            return " ".join(c.text for c in abstract_chunks)
+
+        # Fallback: use the introduction if the abstract wasn't labelled
+        intro_chunks = [c for c in index_payload.chunks if c.section == "introduction"]
+        if intro_chunks:
+            return intro_chunks[0].text
+
+        return index_payload.chunks[0].text if index_payload.chunks else ""
+
+
     def retrieve_for_agent(self, paper_path: str, query: str, sections: list[str] | None = None, top_k: int | None = None) -> str:
         """Retrieve context string for a specific agent (section-aware).
         Used by RetrievalContextProvider — returns only the context string.
@@ -103,6 +130,7 @@ class RetrievalService:
             index_payload = self._build_index(resolved_path, relative_path, doc_id, file_signature)
 
         retrieved_chunks = self._ranker.retrieve(index_payload, query, top_k_value, sections=sections)
+        logger.info(f"{_LOGGER_PREFIX} Retrieved {len(retrieved_chunks)} chunks for paper: {relative_path}")
         return self._context_builder.build_context(relative_path, retrieved_chunks)
 
 
@@ -116,24 +144,20 @@ class RetrievalService:
 
     def _is_index_valid(self, payload: Index | None, relative_path: str, file_signature: FileSignature) -> bool:
         if payload is None:
-            logger.info(f"{_LOGGER_PREFIX} No existing index payload found for paper: {relative_path}")
             return False
-        if payload.paper_path != relative_path:
-            logger.info(f"{_LOGGER_PREFIX} Paper path mismatch for paper: {relative_path}. Expected: {relative_path}, Found: {payload.paper_path}")
-            return False
-        if payload.file_signature.mtime_ns != file_signature.mtime_ns:
-            logger.info(f"{_LOGGER_PREFIX} File modification time mismatch for paper: {relative_path}. Expected: {file_signature.mtime_ns}, Found: {payload.file_signature.mtime_ns}")
-            return False
-        if payload.file_signature.size != file_signature.size:
-            logger.info(f"{_LOGGER_PREFIX} File size mismatch for paper: {relative_path}. Expected: {file_signature.size}, Found: {payload.file_signature.size}")
-            return False
-        if payload.settings.chunk_size != self.config.rag_chunk_size:
-            logger.info(f"{_LOGGER_PREFIX} Chunk size mismatch for paper: {relative_path}. Expected: {self.config.rag_chunk_size}, Found: {payload.settings.chunk_size}")
-            return False
-        if payload.settings.chunk_overlap != self.config.rag_chunk_overlap:
-            logger.info(f"{_LOGGER_PREFIX} Chunk overlap mismatch for paper: {relative_path}. Expected: {self.config.rag_chunk_overlap}, Found: {payload.settings.chunk_overlap}")
-            return False
-        if payload.settings.strategy_version != self.config.rag_strategy_version:
-            logger.info(f"{_LOGGER_PREFIX} Strategy version mismatch for paper: {relative_path}. Expected: {self.config.rag_strategy_version}, Found: {payload.settings.strategy_version}")
-            return False
+
+        checks = [
+            (payload.paper_path != relative_path, "paper path changed"),
+            (payload.file_signature.mtime_ns != file_signature.mtime_ns, "file modified (mtime)"),
+            (payload.file_signature.size != file_signature.size, "file size changed"),
+            (payload.settings.chunk_size != self.config.rag_chunk_size, "chunk_size changed"),
+            (payload.settings.chunk_overlap != self.config.rag_chunk_overlap, "chunk_overlap changed"),
+            (payload.settings.strategy_version != self.config.rag_strategy_version, "strategy_version changed"),
+        ]
+
+        for is_stale, reason in checks:
+            if is_stale:
+                logger.info(f"{_LOGGER_PREFIX} Index stale for '{relative_path}': {reason}")
+                return False
+
         return True

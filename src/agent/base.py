@@ -13,11 +13,9 @@ from models.protocols import ContextProvider
 
 logger = logging.getLogger(__name__)
 
-
 _LOGGER_PREFIX = "[BaseAgent]"
 _CONTEXT_HEADER = "RETRIEVED CONTEXT:"
-_CONTEXT_SEPARATOR = "\n\n---\n\n"
-_PROMPT_SEPARATOR = "\n\n---\n\n"
+_SEPARATOR = "\n\n---\n\n"
 
 
 class AgentValidationError(ValueError):
@@ -30,7 +28,7 @@ class BaseAgent(ABC, Generic[T]):
     AGENT_NAME: AgentName
     SYSTEM_PROMPT: str = ""
     RESPONSE_SCHEMA: type[T] | None = None
-    RAG_QUERY: str = ""
+    RAG_QUERY: str | None = ""
     RAG_SECTIONS: list[str] = []
 
     def __init__(self, client: BaseChatModel, context_provider: ContextProvider | None = None):
@@ -43,38 +41,25 @@ class BaseAgent(ABC, Generic[T]):
         ])
         self._chain: Runnable = self._build_chain(client)
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     def run(self, message: str, paper_path: str | None = None) -> AgentResponse[T]:
         normalized = message.strip()
         if not normalized:
             raise ValueError("Message must not be empty.")
 
-        logger.info(f"{_LOGGER_PREFIX} Running agent '{self.name}' with message: {normalized[:20]} (paper_path={paper_path})")
-
         raw_context = self._get_raw_context(paper_path)
         context_block = self._format_context_block(raw_context)
 
+        logger.info(f"{_LOGGER_PREFIX} Running '{self.name}', ctx_len={len(context_block)}")
         try:
-            logger.info(f"{_LOGGER_PREFIX} Invoking chain for agent '{self.name}' with message: {normalized[:20]} and context length: {len(context_block)}")
             result = self._chain.invoke({"message": normalized, "context": context_block})
         except Exception as exc:
             raise AgentValidationError(str(exc)) from exc
 
         payload = self._extract_payload(result)
-        logger.info(f"{_LOGGER_PREFIX} Agent '{self.name}' produced raw result: {str(result)[:20]}")        
-        return AgentResponse(
-            agent=self.name,
-            payload=payload,
-            input_message=normalized,
-            context_used=raw_context or None,
-        )
+        return AgentResponse(agent=self.name, payload=payload, input_message=normalized, context_used=raw_context or None)
 
     @classmethod
     def build_preview(cls, message: str, context: str = "") -> dict:
-        """Build prompt preview from class constants — no LLM instance needed."""
         prompt = ChatPromptTemplate.from_messages([
             ("system", cls.SYSTEM_PROMPT),
             ("human", "{context}{message}"),
@@ -82,8 +67,8 @@ class BaseAgent(ABC, Generic[T]):
         context_block = cls._format_context_block(context)
         messages = prompt.format_messages(message=message, context=context_block)
 
-        system_content = cls._extract_message_content(messages, SystemMessage)
-        human_content = cls._extract_message_content(messages, HumanMessage)
+        system_content = next((m.content for m in messages if isinstance(m, SystemMessage)), "")
+        human_content  = next((m.content for m in messages if isinstance(m, HumanMessage)),  "")
         schema_content = (
             json.dumps(cls.RESPONSE_SCHEMA.model_json_schema(), ensure_ascii=False, indent=2)
             if cls.RESPONSE_SCHEMA else ""
@@ -99,16 +84,8 @@ class BaseAgent(ABC, Generic[T]):
             "system_prompt": system_content,
             "schema_instructions": schema_content,
             "message_section": human_content,
-            "full_prompt": _PROMPT_SEPARATOR.join(parts),
+            "full_prompt": _SEPARATOR.join(parts),
         }
-
-    def get_prompt_preview(self, message: str, context: str = "") -> dict:
-        """Return prompt parts as a structured dict (for UI preview)."""
-        return self.__class__.build_preview(message, context)
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
 
     def _build_chain(self, client: BaseChatModel) -> Runnable:
         if self.RESPONSE_SCHEMA is not None:
@@ -124,18 +101,10 @@ class BaseAgent(ABC, Generic[T]):
     def _format_context_block(raw_context: str) -> str:
         if not raw_context or not raw_context.strip():
             return ""
-        return f"{_CONTEXT_HEADER}\n{raw_context}{_CONTEXT_SEPARATOR}"
+        return f"{_CONTEXT_HEADER}\n{raw_context}{_SEPARATOR}"
 
     @staticmethod
     def _extract_payload(result) -> BaseModel:
         if isinstance(result, BaseModel):
             return result
         return RawResponse(response=str(result.content))
-
-    @staticmethod
-    def _extract_message_content(messages: list[BaseMessage], msg_type: type) -> str:
-        for msg in messages:
-            if isinstance(msg, msg_type):
-                return msg.content
-        return ""
-

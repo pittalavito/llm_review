@@ -22,7 +22,7 @@ class BM25Ranker:
             return []
 
         candidates = self._select_candidates(payload.chunks, sections, top_k_value)
-        return self._bm25_rank(candidates, payload.doc_freq, query_tokens, top_k_value)
+        return self._bm25_rank(candidates, payload.doc_freq, query_tokens, top_k_value, len(payload.chunks))
 
     # ------------------------------------------------------------------
 
@@ -52,10 +52,13 @@ class BM25Ranker:
         doc_freq: dict[str, int],
         query_tokens: list[str],
         top_k: int,
+        total_chunks: int | None = None,
     ) -> list[RetrievedChunk]:
         query_counts = Counter(query_tokens)
-        chunk_count = len(candidates)
-        avg_length = sum(c.length for _, c in candidates) / chunk_count
+        # IDF must use the total corpus size (all chunks), not just the filtered candidates,
+        # otherwise doc_freq > candidate_count produces negative IDF → zero results.
+        n = total_chunks if total_chunks is not None else len(candidates)
+        avg_length = sum(c.length for _, c in candidates) / len(candidates)
         k1, b = 1.5, 0.75
 
         scores: list[tuple[float, int, IndexedChunk]] = []
@@ -66,7 +69,7 @@ class BM25Ranker:
                 if tf <= 0:
                     continue
                 df = int(doc_freq.get(term, 0))
-                idf = math.log(1 + ((chunk_count - df + 0.5) / (df + 0.5)))
+                idf = math.log(1 + ((n - df + 0.5) / (df + 0.5)))
                 numerator = tf * (k1 + 1)
                 denominator = tf + k1 * (1 - b + b * (chunk.length / avg_length))
                 score += qf * idf * (numerator / denominator)

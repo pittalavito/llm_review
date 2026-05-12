@@ -6,14 +6,16 @@
 import { listPapers, listModels, getGraphConfig, compileGraph, runGraph } from '../api.js';
 
 const AGENT_LABELS = {
-  soundness_reviewer:    '🔬 Soundness Reviewer',
-  presentation_reviewer: '🎨 Presentation Reviewer',
-  contribution_reviewer: '📐 Contribution Reviewer',
-  meta_reviewer:         '📋 Meta Reviewer',
-  author_agent:          '✍️  Author Agent',
+  reviewer_1:   '👤 Reviewer 1',
+  reviewer_2:   '👤 Reviewer 2',
+  reviewer_3:   '👤 Reviewer 3',
+  meta_reviewer: '📋 Meta Reviewer',
+  area_chair:    '🏛️ Area Chair',
+  author_agent:  '✍️  Author Agent',
 };
 
-const AGENT_NAMES = Object.keys(AGENT_LABELS);
+const REVIEWER_NAMES = ['reviewer_1', 'reviewer_2', 'reviewer_3'];
+const AGENT_NAMES    = Object.keys(AGENT_LABELS);
 
 const DECISION_BADGE = {
   accept:         { label: 'ACCEPT',         cls: 'badge--accept' },
@@ -21,6 +23,12 @@ const DECISION_BADGE = {
   major_revision: { label: 'MAJOR REVISION', cls: 'badge--major' },
   reject:         { label: 'REJECT',         cls: 'badge--reject' },
 };
+
+const COMMITMENT_OPTIONS   = ['responsible', 'irresponsible'];
+const INTENTION_OPTIONS    = ['benign', 'malicious'];
+const KNOWLEDGE_OPTIONS    = ['knowledgeable', 'unknowledgeable'];
+const FOCUS_OPTIONS        = ['soundness', 'empirical', 'novelty'];
+const AC_STYLE_OPTIONS     = ['inclusive', 'conformist', 'authoritarian'];
 
 // ---------------------------------------------------------------------------
 // render
@@ -98,9 +106,8 @@ export async function mount(el) {
 
   let currentConfig = null;
   let models        = [];
-  let editMode      = false;   // false = read-only, true = editing
+  let editMode      = false;
 
-  // Load all in parallel
   let papers = [];
   try {
     [papers, models, currentConfig] = await Promise.all([listPapers(), listModels(), getGraphConfig()]);
@@ -109,7 +116,6 @@ export async function mount(el) {
     return;
   }
 
-  // ── Helpers to switch modes ──
   function enterReadOnly() {
     editMode = false;
     renderReadOnly(configBody, currentConfig);
@@ -132,15 +138,12 @@ export async function mount(el) {
     compileStatus.textContent = '';
   }
 
-  // Initial state
   enterReadOnly();
 
-  // Populate papers
   paperSel.innerHTML = papers.length
     ? papers.map(p => `<option value="${p}">${p}</option>`).join('')
     : '<option value="">Nessun paper disponibile</option>';
 
-  // Enable run if compiled
   if (currentConfig) {
     runBtn.disabled = false;
     runStatus.textContent = 'Pronto';
@@ -150,14 +153,9 @@ export async function mount(el) {
     runStatus.className = 'gr-status';
   }
 
-  // ── Action button: Ricompila ↔ Compila ──
   actionBtn.addEventListener('click', async () => {
-    if (!editMode) {
-      enterEditMode();
-      return;
-    }
+    if (!editMode) { enterEditMode(); return; }
 
-    // === In edit mode: compile ===
     hideError(compileError);
     actionBtn.disabled  = true;
     cancelBtn.disabled  = true;
@@ -183,12 +181,8 @@ export async function mount(el) {
     }
   });
 
-  // ── Annulla ──
-  cancelBtn.addEventListener('click', () => {
-    enterReadOnly();
-  });
+  cancelBtn.addEventListener('click', () => enterReadOnly());
 
-  // ── Run ──
   runBtn.addEventListener('click', async () => {
     const paper = paperSel.value;
     if (!paper) { showError(runError, 'Seleziona un paper.'); return; }
@@ -225,17 +219,27 @@ function renderReadOnly(container, config) {
     container.innerHTML = `<p class="gr-no-config">Nessun grafo compilato. Premi <strong>Ricompila</strong> per configurarlo.</p>`;
     return;
   }
-  const rows = (config.agents || []).map(a => `
-    <tr>
-      <td>${AGENT_LABELS[a.agent_name] || a.agent_name}</td>
-      <td><code>${a.model}</code></td>
-      <td>${a.temperature}</td>
-    </tr>
-  `).join('');
+  const rows = (config.agents || []).map(a => {
+    let extra = '';
+    if (REVIEWER_NAMES.includes(a.agent_name) && a.reviewer_persona) {
+      const p = a.reviewer_persona;
+      extra = `<small>${p.focus ?? 'soundness'} · ${p.commitment} · ${p.intention} · ${p.knowledgeability}</small>`;
+    } else if (a.agent_name === 'area_chair' && a.area_chair_style) {
+      extra = `<small>${a.area_chair_style}</small>`;
+    }
+    return `
+      <tr>
+        <td>${AGENT_LABELS[a.agent_name] || a.agent_name}</td>
+        <td><code>${a.model}</code></td>
+        <td>${a.temperature}</td>
+        <td>${extra}</td>
+      </tr>
+    `;
+  }).join('');
   container.innerHTML = `
     <p class="gr-config-meta">Max rounds: <strong>${config.max_rounds ?? '?'}</strong></p>
     <table class="gr-config-table">
-      <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th></tr></thead>
+      <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th><th>Persona / Stile</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
@@ -251,6 +255,42 @@ function renderEditable(container, config, models) {
     const existing = config.agents?.find(a => a.agent_name === name);
     const model    = existing?.model       ?? 'mock';
     const temp     = existing?.temperature ?? 0.7;
+
+    let extraCell = '<td></td>';
+
+    if (REVIEWER_NAMES.includes(name)) {
+      const p = existing?.reviewer_persona || {};
+      const focus          = p.focus          ?? 'soundness';
+      const commitment     = p.commitment     ?? 'responsible';
+      const intention      = p.intention      ?? 'benign';
+      const knowledgeability = p.knowledgeability ?? 'knowledgeable';
+      extraCell = `
+        <td>
+          <select class="form-select gr-persona-focus" style="width:auto;font-size:0.75rem">
+            ${FOCUS_OPTIONS.map(o => `<option ${o === focus ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+          <select class="form-select gr-persona-commitment" style="width:auto;font-size:0.75rem">
+            ${COMMITMENT_OPTIONS.map(o => `<option ${o === commitment ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+          <select class="form-select gr-persona-intention" style="width:auto;font-size:0.75rem">
+            ${INTENTION_OPTIONS.map(o => `<option ${o === intention ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+          <select class="form-select gr-persona-knowledge" style="width:auto;font-size:0.75rem">
+            ${KNOWLEDGE_OPTIONS.map(o => `<option ${o === knowledgeability ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+        </td>
+      `;
+    } else if (name === 'area_chair') {
+      const style = existing?.area_chair_style ?? 'inclusive';
+      extraCell = `
+        <td>
+          <select class="form-select gr-ac-style" style="width:auto;font-size:0.75rem">
+            ${AC_STYLE_OPTIONS.map(o => `<option ${o === style ? 'selected' : ''}>${o}</option>`).join('')}
+          </select>
+        </td>
+      `;
+    }
+
     return `
       <tr data-agent="${name}">
         <td>${AGENT_LABELS[name]}</td>
@@ -261,8 +301,9 @@ function renderEditable(container, config, models) {
         </td>
         <td>
           <input type="number" class="form-input gr-temp-inp"
-                 value="${temp}" min="0" max="2" step="0.1" />
+                 value="${temp}" min="0" max="2" step="0.1" style="width:5rem"/>
         </td>
+        ${extraCell}
       </tr>
     `;
   }).join('');
@@ -276,7 +317,7 @@ function renderEditable(container, config, models) {
       </div>
     </div>
     <table class="gr-config-table gr-config-table--edit">
-      <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th></tr></thead>
+      <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th><th>Persona / Stile</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
@@ -290,11 +331,25 @@ function readFormValues(container) {
   const agents = AGENT_NAMES.map(name => {
     const row = container.querySelector(`tr[data-agent="${name}"]`);
     if (!row) throw new Error(`Riga agente non trovata: ${name}`);
-    return {
+
+    const entry = {
       agent_name:  name,
       model:       row.querySelector('.gr-model-sel').value,
       temperature: parseFloat(row.querySelector('.gr-temp-inp').value),
     };
+
+    if (REVIEWER_NAMES.includes(name)) {
+      entry.reviewer_persona = {
+        focus:          row.querySelector('.gr-persona-focus').value,
+        commitment:     row.querySelector('.gr-persona-commitment').value,
+        intention:      row.querySelector('.gr-persona-intention').value,
+        knowledgeability: row.querySelector('.gr-persona-knowledge').value,
+      };
+    } else if (name === 'area_chair') {
+      entry.area_chair_style = row.querySelector('.gr-ac-style').value;
+    }
+
+    return entry;
   });
   return { max_rounds: maxRounds, agents };
 }
@@ -323,7 +378,8 @@ function renderResult(el, result) {
 
   body.innerHTML = `
     ${renderMetaSummary(result.meta_review || {})}
-    ${result.author_response ? renderAuthorResponse(result.author_response) : ''}
+    ${result.area_chair_response ? renderAreaChairResponse(result.area_chair_response) : ''}
+    ${result.author_response     ? renderAuthorResponse(result.author_response)         : ''}
     ${renderReviewsList(result.reviews || [])}
   `;
 
@@ -333,33 +389,54 @@ function renderResult(el, result) {
 
 function renderMetaSummary(meta) {
   if (!meta.summary) return '';
-  const score     = meta.overall_score ? `⭐ ${meta.overall_score}/5` : '';
+  const score     = meta.overall_score ? `⭐ ${meta.overall_score}/10` : '';
+  const rec       = meta.recommendation ? `Raccomandazione: <strong>${meta.recommendation}</strong>` : '';
   const keyPoints = (meta.key_points || []).map(p => `<li>${p}</li>`).join('');
   return `
     <div class="gr-block">
-      <div class="gr-block-title">Meta Review ${score}</div>
+      <div class="gr-block-title">📋 Meta Review ${score}</div>
+      ${rec ? `<p class="gr-block-text">${rec}</p>` : ''}
       <p class="gr-block-text">${meta.summary}</p>
       ${keyPoints ? `<ul class="gr-key-points">${keyPoints}</ul>` : ''}
     </div>
   `;
 }
 
+function renderAreaChairResponse(ac) {
+  if (!ac.decision) return '';
+  const badge = DECISION_BADGE[ac.decision] || { label: ac.decision.toUpperCase(), cls: 'badge--unknown' };
+  return `
+    <div class="gr-block gr-block--ac">
+      <div class="gr-block-title">🏛️ Area Chair Decision &nbsp;<span class="badge ${badge.cls}">${badge.label}</span></div>
+      ${ac.summary      ? `<p class="gr-block-text">${ac.summary}</p>`                            : ''}
+      ${ac.justification ? `<p class="gr-block-text"><em>${ac.justification}</em></p>`            : ''}
+      ${ac.confidence   ? `<p class="gr-block-text">Confidence: ${ac.confidence}/5</p>`          : ''}
+    </div>
+  `;
+}
+
 function renderAuthorResponse(authorResponse) {
-  const rebuttal = authorResponse.rebuttal || '';
+  const rebuttal   = authorResponse.rebuttal    || '';
   const keyChanges = (authorResponse.key_changes || []).map(c => `<li>${c}</li>`).join('');
-  const sections = authorResponse.revised_sections || [];
-  const revisedSections = sections.map(s => `
-      <details class="gr-revised-section">
-        <summary>[Revised ${(s.section_name || '').toUpperCase()}]</summary>
-        <p class="gr-block-text">${s.content || ''}</p>
-      </details>
-    `).join('');
+  const rebuttals  = (authorResponse.reviewer_rebuttals || []).map(r => `
+    <details class="gr-revised-section">
+      <summary>Risposta a ${r.reviewer_name}</summary>
+      <p class="gr-block-text">${r.response || ''}</p>
+    </details>
+  `).join('');
+  const sections   = (authorResponse.revised_sections || []).map(s => `
+    <details class="gr-revised-section">
+      <summary>[Revised ${(s.section_name || '').toUpperCase()}]</summary>
+      <p class="gr-block-text">${s.content || ''}</p>
+    </details>
+  `).join('');
   return `
     <div class="gr-block gr-block--notes">
       <div class="gr-block-title">✍️ Author Response</div>
-      ${rebuttal ? `<p class="gr-block-text"><strong>Rebuttal:</strong> ${rebuttal}</p>` : ''}
-      ${keyChanges ? `<p><strong>Key changes:</strong></p><ul>${keyChanges}</ul>` : ''}
-      ${revisedSections}
+      ${rebuttal  ? `<p class="gr-block-text"><strong>Rebuttal:</strong> ${rebuttal}</p>` : ''}
+      ${rebuttals}
+      ${keyChanges ? `<p><strong>Key changes:</strong></p><ul>${keyChanges}</ul>`        : ''}
+      ${sections}
     </div>
   `;
 }
@@ -369,23 +446,26 @@ function renderReviewsList(reviews) {
   const items = reviews.map((raw, i) => {
     let data;
     try { data = JSON.parse(raw); } catch { return ''; }
-    const label    = AGENT_LABELS[data.agent] || data.agent || `Review ${i + 1}`;
-    const payload  = data.payload || {};
-    const score    = payload.soundness_score ?? payload.presentation_score ?? payload.contribution_score ?? null;
-    const conf     = payload.confidence ?? null;
-    const strengths  = (payload.strengths  || []).map(s => `<li>${s}</li>`).join('');
-    const weaknesses = (payload.weaknesses || []).map(w => `<li>${w}</li>`).join('');
+    const label   = AGENT_LABELS[data.agent] || data.agent || `Review ${i + 1}`;
+    const payload = data.payload || {};
+    const rating  = payload.rating ?? null;
+    const conf    = payload.confidence ?? null;
+    const acceptance = (payload.reasons_for_acceptance || []).map(s => `<li>${s}</li>`).join('');
+    const rejection  = (payload.reasons_for_rejection  || []).map(w => `<li>${w}</li>`).join('');
+    const suggestions= (payload.suggestions            || []).map(s => `<li>${s}</li>`).join('');
     return `
       <details class="gr-review">
         <summary class="gr-review-summary">
           <span>${label}</span>
-          ${score !== null ? `<span class="gr-score">${score}/5</span>` : ''}
-          ${conf  !== null ? `<span class="gr-conf">conf ${conf}/5</span>` : ''}
+          ${rating !== null ? `<span class="gr-score">${rating}/10</span>` : ''}
+          ${conf   !== null ? `<span class="gr-conf">conf ${conf}/5</span>` : ''}
         </summary>
         <div class="gr-review-body">
-          ${payload.summary ? `<p>${payload.summary}</p>` : ''}
-          ${strengths  ? `<div class="gr-list-title">Strengths</div><ul>${strengths}</ul>`   : ''}
-          ${weaknesses ? `<div class="gr-list-title">Weaknesses</div><ul>${weaknesses}</ul>` : ''}
+          ${payload.summary               ? `<p>${payload.summary}</p>`                                                 : ''}
+          ${payload.significance_and_novelty ? `<p><strong>Significance & Novelty:</strong> ${payload.significance_and_novelty}</p>` : ''}
+          ${acceptance ? `<div class="gr-list-title">Reasons for Acceptance</div><ul>${acceptance}</ul>` : ''}
+          ${rejection  ? `<div class="gr-list-title">Reasons for Rejection</div><ul>${rejection}</ul>`  : ''}
+          ${suggestions? `<div class="gr-list-title">Suggestions</div><ul>${suggestions}</ul>`          : ''}
         </div>
       </details>
     `;
@@ -405,7 +485,15 @@ function renderReviewsList(reviews) {
 function defaultConfig() {
   return {
     max_rounds: 2,
-    agents: AGENT_NAMES.map(name => ({ agent_name: name, model: 'mock', temperature: 0.7 })),
+    agents: [
+      ...REVIEWER_NAMES.map(name => ({
+        agent_name: name, model: 'mock', temperature: 0.7,
+        reviewer_persona: { commitment: 'responsible', intention: 'benign', knowledgeability: 'knowledgeable' },
+      })),
+      { agent_name: 'meta_reviewer', model: 'mock', temperature: 0.7 },
+      { agent_name: 'area_chair',    model: 'mock', temperature: 0.7, area_chair_style: 'inclusive' },
+      { agent_name: 'author_agent',  model: 'mock', temperature: 0.7 },
+    ],
   };
 }
 

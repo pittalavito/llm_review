@@ -15,18 +15,21 @@ from pydantic import BaseModel
 from models.agent import (
     AgentName,
     AgentResponse,
+    AreaChairResponse,
+    AreaChairStyle,
     RawResponse,
-    SoundnessReviewResponse,
-    ContributionReviewResponse,
-    PresentationReviewResponse,
+    ReviewerCommitment,
+    ReviewerIntention,
+    ReviewerKnowledgeability,
+    ReviewerPersona,
+    ReviewerResponse,
     MetaReviewResponse,
     AuthorResponse,
 )
 from agent.base import BaseAgent
-from agent.impl.soundness_reviewer import SoundnessReviewerAgent
-from agent.impl.contribution_reviewer import ContributionReviewerAgent
-from agent.impl.presentation_reviewer import PresentationReviewerAgent
+from agent.impl.reviewer_agent import ReviewerAgent
 from agent.impl.meta_reviewer import MetaReviewerAgent
+from agent.impl.area_chair_agent import AreaChairAgent
 from agent.impl.author_agent import AuthorAgent
 from client.mock_chat import MockChatModel
 
@@ -41,7 +44,7 @@ class SimpleResponse(BaseModel):
 
 class ConcreteAgent(BaseAgent[SimpleResponse]):
     """Minimal concrete agent for testing BaseAgent behaviour."""
-    AGENT_NAME = AgentName.SOUNDNESS_REVIEWER
+    AGENT_NAME = AgentName.REVIEWER_1
     SYSTEM_PROMPT = "You are a test agent."
     RESPONSE_SCHEMA = SimpleResponse
     RAG_QUERY = "test query"
@@ -50,7 +53,7 @@ class ConcreteAgent(BaseAgent[SimpleResponse]):
 
 class NoSchemaAgent(BaseAgent[RawResponse]):
     """Agent with no structured output schema."""
-    AGENT_NAME = AgentName.SOUNDNESS_REVIEWER
+    AGENT_NAME = AgentName.REVIEWER_1
     SYSTEM_PROMPT = "Raw response agent."
     RESPONSE_SCHEMA = None
     RAG_QUERY = ""
@@ -96,22 +99,22 @@ class SimpleResponseMock(BaseChatModel):
 class TestAgentResponse:
 
     def test_to_dict_contains_agent(self):
-        r = AgentResponse(agent=AgentName.SOUNDNESS_REVIEWER, payload=SimpleResponse(value="x"))
+        r = AgentResponse(agent=AgentName.REVIEWER_1, payload=SimpleResponse(value="x"))
         d = r.to_dict()
-        assert d["agent"] == AgentName.SOUNDNESS_REVIEWER
+        assert d["agent"] == AgentName.REVIEWER_1
 
     def test_to_dict_contains_payload(self):
-        r = AgentResponse(agent=AgentName.SOUNDNESS_REVIEWER, payload=SimpleResponse(value="hello"))
+        r = AgentResponse(agent=AgentName.REVIEWER_1, payload=SimpleResponse(value="hello"))
         d = r.to_dict()
         assert d["payload"]["value"] == "hello"
 
     def test_to_json_is_string(self):
-        r = AgentResponse(agent=AgentName.SOUNDNESS_REVIEWER, payload=SimpleResponse(value="x"))
+        r = AgentResponse(agent=AgentName.REVIEWER_1, payload=SimpleResponse(value="x"))
         assert isinstance(r.to_json(), str)
 
     def test_to_json_roundtrip(self):
         import json
-        r = AgentResponse(agent=AgentName.SOUNDNESS_REVIEWER, payload=SimpleResponse(value="roundtrip"))
+        r = AgentResponse(agent=AgentName.REVIEWER_1, payload=SimpleResponse(value="roundtrip"))
         data = json.loads(r.to_json())
         assert data["payload"]["value"] == "roundtrip"
 
@@ -140,10 +143,9 @@ class TestBaseAgent:
 
     def test_run_agent_name_propagated(self, agent):
         result = agent.run("analyse this paper")
-        assert result.agent == AgentName.SOUNDNESS_REVIEWER
+        assert result.agent == AgentName.REVIEWER_1
 
     def test_run_without_paper_path_no_context(self, agent):
-        # No paper_path → context block is empty → still works
         result = agent.run("analyse this paper")
         assert result is not None
 
@@ -228,20 +230,20 @@ class TestConcreteAgentsWithMock:
     def mock_llm(self):
         return MockChatModel()
 
-    def test_soundness_reviewer_returns_typed_payload(self, mock_llm):
-        agent = SoundnessReviewerAgent(client=mock_llm)
+    def test_reviewer_1_returns_typed_payload(self, mock_llm):
+        agent = ReviewerAgent(client=mock_llm, agent_name=AgentName.REVIEWER_1)
         result = agent.run("review this paper")
-        assert isinstance(result.payload, SoundnessReviewResponse)
+        assert isinstance(result.payload, ReviewerResponse)
 
-    def test_contribution_reviewer_returns_typed_payload(self, mock_llm):
-        agent = ContributionReviewerAgent(client=mock_llm)
+    def test_reviewer_2_returns_typed_payload(self, mock_llm):
+        agent = ReviewerAgent(client=mock_llm, agent_name=AgentName.REVIEWER_2)
         result = agent.run("review this paper")
-        assert isinstance(result.payload, ContributionReviewResponse)
+        assert isinstance(result.payload, ReviewerResponse)
 
-    def test_presentation_reviewer_returns_typed_payload(self, mock_llm):
-        agent = PresentationReviewerAgent(client=mock_llm)
+    def test_reviewer_3_returns_typed_payload(self, mock_llm):
+        agent = ReviewerAgent(client=mock_llm, agent_name=AgentName.REVIEWER_3)
         result = agent.run("review this paper")
-        assert isinstance(result.payload, PresentationReviewResponse)
+        assert isinstance(result.payload, ReviewerResponse)
 
     def test_meta_reviewer_returns_typed_payload(self, mock_llm):
         agent = MetaReviewerAgent(client=mock_llm)
@@ -253,19 +255,85 @@ class TestConcreteAgentsWithMock:
         result = agent.run("respond to these reviews")
         assert isinstance(result.payload, AuthorResponse)
 
-    def test_soundness_reviewer_agent_name(self, mock_llm):
-        agent = SoundnessReviewerAgent(client=mock_llm)
+    def test_reviewer_agent_name_propagated(self, mock_llm):
+        agent = ReviewerAgent(client=mock_llm, agent_name=AgentName.REVIEWER_2)
         result = agent.run("review this paper")
-        assert result.agent == AgentName.SOUNDNESS_REVIEWER
+        assert result.agent == AgentName.REVIEWER_2
 
-    def test_meta_reviewer_decision_field(self, mock_llm):
+    def test_reviewer_response_has_rating(self, mock_llm):
+        agent = ReviewerAgent(client=mock_llm, agent_name=AgentName.REVIEWER_1)
+        result = agent.run("review this paper")
+        assert 1 <= result.payload.rating <= 10
+
+    def test_area_chair_returns_typed_payload(self, mock_llm):
+        agent = AreaChairAgent(client=mock_llm)
+        result = agent.run("make a decision")
+        assert isinstance(result.payload, AreaChairResponse)
+
+    def test_area_chair_decision_field(self, mock_llm):
+        agent = AreaChairAgent(client=mock_llm)
+        result = agent.run("make a decision")
+        assert result.payload.decision in {"accept", "minor_revision", "major_revision", "reject"}
+
+    def test_meta_reviewer_recommendation_field(self, mock_llm):
         agent = MetaReviewerAgent(client=mock_llm)
         result = agent.run("review this paper")
-        assert result.payload.decision in {"accept", "minor_revision", "major_revision", "reject"}
+        assert result.payload.recommendation in {"accept", "minor_revision", "major_revision", "reject"}
 
     def test_to_json_serializable(self, mock_llm):
         import json
-        agent = SoundnessReviewerAgent(client=mock_llm)
+        agent = ReviewerAgent(client=mock_llm, agent_name=AgentName.REVIEWER_1)
         result = agent.run("review this paper")
         data = json.loads(result.to_json())
         assert "payload" in data
+
+
+# ---------------------------------------------------------------------------
+# Reviewer persona (bias experiments)
+# ---------------------------------------------------------------------------
+
+class TestReviewerPersona:
+
+    @pytest.fixture
+    def mock_llm(self):
+        return MockChatModel()
+
+    def test_malicious_persona_system_prompt_contains_biased(self, mock_llm):
+        persona = ReviewerPersona(intention=ReviewerIntention.MALICIOUS)
+        agent = ReviewerAgent(client=mock_llm, persona=persona, agent_name=AgentName.REVIEWER_1)
+        assert "reject" in agent.SYSTEM_PROMPT.lower()
+
+    def test_irresponsible_persona_system_prompt_contains_superficial(self, mock_llm):
+        persona = ReviewerPersona(commitment=ReviewerCommitment.IRRESPONSIBLE)
+        agent = ReviewerAgent(client=mock_llm, persona=persona, agent_name=AgentName.REVIEWER_1)
+        assert "superficial" in agent.SYSTEM_PROMPT.lower() or "rushed" in agent.SYSTEM_PROMPT.lower()
+
+    def test_unknowledgeable_persona_system_prompt_contains_limited(self, mock_llm):
+        persona = ReviewerPersona(knowledgeability=ReviewerKnowledgeability.UNKNOWLEDGEABLE)
+        agent = ReviewerAgent(client=mock_llm, persona=persona, agent_name=AgentName.REVIEWER_1)
+        assert "limited" in agent.SYSTEM_PROMPT.lower()
+
+    def test_different_personas_produce_different_prompts(self, mock_llm):
+        benign = ReviewerAgent(
+            client=mock_llm,
+            persona=ReviewerPersona(intention=ReviewerIntention.BENIGN),
+            agent_name=AgentName.REVIEWER_1,
+        )
+        malicious = ReviewerAgent(
+            client=mock_llm,
+            persona=ReviewerPersona(intention=ReviewerIntention.MALICIOUS),
+            agent_name=AgentName.REVIEWER_1,
+        )
+        assert benign.SYSTEM_PROMPT != malicious.SYSTEM_PROMPT
+
+    def test_area_chair_authoritarian_style(self, mock_llm):
+        agent = AreaChairAgent(client=mock_llm, style=AreaChairStyle.AUTHORITARIAN)
+        assert "own" in agent.SYSTEM_PROMPT.lower() or "override" in agent.SYSTEM_PROMPT.lower()
+
+    def test_area_chair_conformist_style(self, mock_llm):
+        agent = AreaChairAgent(client=mock_llm, style=AreaChairStyle.CONFORMIST)
+        assert "defer" in agent.SYSTEM_PROMPT.lower() or "consensus" in agent.SYSTEM_PROMPT.lower()
+
+    def test_area_chair_inclusive_style(self, mock_llm):
+        agent = AreaChairAgent(client=mock_llm, style=AreaChairStyle.INCLUSIVE)
+        assert "all" in agent.SYSTEM_PROMPT.lower() or "balanced" in agent.SYSTEM_PROMPT.lower()

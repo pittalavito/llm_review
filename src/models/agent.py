@@ -17,7 +17,7 @@ class LlmModelName(StrEnum):
     OLLAMA_TINYLLAMA = "tinyllama:1.1b"
     OLLAMA_LLAMA32 = "llama3.2:3b"
     OLLAMA_GROQ_TOOL_USE = "llama3-groq-tool-use"
-    OLLAMA_GEMMA_4 = "gemma3:4b"
+    OLLAMA_GEMMA_4 = "gemma4"
     # OpenAI
     OPENAI_GPT4O = "gpt-4o"
     OPENAI_GPT4O_MINI = "gpt-4o-mini"
@@ -46,10 +46,11 @@ class LlmModelName(StrEnum):
 #########################################################
 
 class AgentName(StrEnum):
-    SOUNDNESS_REVIEWER = "soundness_reviewer"
-    PRESENTATION_REVIEWER = "presentation_reviewer"
-    CONTRIBUTION_REVIEWER = "contribution_reviewer"
+    REVIEWER_1 = "reviewer_1"
+    REVIEWER_2 = "reviewer_2"
+    REVIEWER_3 = "reviewer_3"
     META_REVIEWER = "meta_reviewer"
+    AREA_CHAIR = "area_chair"
     AUTHOR_AGENT = "author_agent"
 
 
@@ -76,27 +77,55 @@ class AgentResponse(BaseModel, Generic[T]):
 
 
 ##########################################################
-### REVIEW RESPONSE MODELS ###############################
+### REVIEWER FOCUS #######################################
 ##########################################################
 
-class BaseReviewResponse(BaseModel):
-    """Common fields shared by all specialized review responses."""
-    summary: str = Field(min_length=1, max_length=2_000)
-    strengths: list[str] = Field(min_length=1, max_length=10)
-    weaknesses: list[str] = Field(min_length=1, max_length=10)
+class ReviewerFocus(StrEnum):
+    """Primary evaluation angle assigned to a reviewer.
+    Each reviewer covers a different dimension of the paper so that
+    the three reviews are complementary rather than redundant.
+    """
+    SOUNDNESS = "soundness"   # theoretical correctness, proofs, assumptions
+    EMPIRICAL = "empirical"  # experiments, baselines, reproducibility
+    NOVELTY = "novelty"    # originality, related work, impact
+
+
+##########################################################
+### REVIEWER PERSONA #####################################
+##########################################################
+
+class ReviewerCommitment(StrEnum):
+    RESPONSIBLE = "responsible"
+    IRRESPONSIBLE = "irresponsible"
+
+class ReviewerIntention(StrEnum):
+    BENIGN = "benign"
+    MALICIOUS = "malicious"
+
+class ReviewerKnowledgeability(StrEnum):
+    KNOWLEDGEABLE = "knowledgeable"
+    UNKNOWLEDGEABLE = "unknowledgeable"
+
+class ReviewerPersona(BaseModel):
+    commitment: ReviewerCommitment = ReviewerCommitment.RESPONSIBLE
+    intention: ReviewerIntention = ReviewerIntention.BENIGN
+    knowledgeability: ReviewerKnowledgeability = ReviewerKnowledgeability.KNOWLEDGEABLE
+    focus: ReviewerFocus = ReviewerFocus.SOUNDNESS
+
+
+##########################################################
+### REVIEWER RESPONSE MODEL (aligned with AgentReview) ###
+##########################################################
+
+class ReviewerResponse(BaseModel):
+    """Unified review aligned with AgentReview format: covers soundness, novelty, presentation, and impact."""
+    summary: str = Field(min_length=1, max_length=600)
+    significance_and_novelty: str = Field(min_length=1, max_length=300)
+    reasons_for_acceptance: list[str] = Field(min_length=1, max_length=4)
+    reasons_for_rejection: list[str] = Field(default_factory=list, max_length=4)
+    suggestions: list[str] = Field(default_factory=list, max_length=4)
+    rating: int = Field(ge=1, le=10)
     confidence: int = Field(ge=1, le=5)
-
-class SoundnessReviewResponse(BaseReviewResponse):
-    """Evaluates scientific soundness: validity of methods, experimental rigor, and support for conclusions."""
-    soundness_score: int = Field(ge=1, le=5)
-
-class PresentationReviewResponse(BaseReviewResponse):
-    """Evaluates the clarity, structure, and writing quality of the paper."""
-    presentation_score: int = Field(ge=1, le=5)
-
-class ContributionReviewResponse(BaseReviewResponse):
-    """Evaluates the originality, relevance, and impact of the scientific contribution."""
-    contribution_score: int = Field(ge=1, le=5)
 
 
 ##########################################################
@@ -110,13 +139,30 @@ class ReviewDecision(StrEnum):
     REJECT = "reject"
 
 class MetaReviewResponse(BaseModel):
-    """Aggregates the reviews from the three reviewers and produces the final decision."""
-    summary: str = Field(min_length=1, max_length=3_000)
-    key_points: list[str] = Field(min_length=1, max_length=10)
-    overall_score: int = Field(ge=1, le=5)
+    """Aggregates the three reviews into a summary and recommendation for the Area Chair."""
+    summary: str = Field(min_length=1, max_length=600)
+    key_points: list[str] = Field(min_length=1, max_length=5)
+    overall_score: int = Field(ge=1, le=10)
+    recommendation: ReviewDecision
+
+
+##########################################################
+### AREA CHAIR MODELS ####################################
+##########################################################
+
+class AreaChairStyle(StrEnum):
+    AUTHORITARIAN = "authoritarian"
+    CONFORMIST = "conformist"
+    INCLUSIVE = "inclusive"
+
+class AreaChairResponse(BaseModel):
+    """Final binding decision produced by the Area Chair after reading reviews and meta-review."""
+    summary: str = Field(min_length=1, max_length=400)
+    justification: str = Field(min_length=1, max_length=400)
     decision: ReviewDecision
-    
-    
+    confidence: int = Field(ge=1, le=5)
+
+
 ###########################################################
 ### AUTHOR RESPONSE MODEL #################################
 ###########################################################
@@ -126,8 +172,14 @@ class RevisedSection(BaseModel):
     section_name: str
     content: str
 
+class ReviewerRebuttal(BaseModel):
+    """Targeted rebuttal addressed to a specific reviewer."""
+    reviewer_name: str  # e.g. "reviewer_1"
+    response: str = Field(min_length=1, max_length=1_000)
+
 class AuthorResponse(BaseModel):
-    """Author's rebuttal and revised paper sections in response to reviewer critiques."""
-    rebuttal: str = Field(min_length=1, max_length=2_000)
-    revised_sections: list[RevisedSection] = Field(default_factory=list)
-    key_changes: list[str] = Field(min_length=1, max_length=10)
+    """Author's rebuttal, per-reviewer targeted responses, and revised paper sections."""
+    rebuttal: str = Field(min_length=1, max_length=600)
+    reviewer_rebuttals: list[ReviewerRebuttal] = Field(default_factory=list)
+    revised_sections: list[RevisedSection] = Field(default_factory=list, max_length=3)
+    key_changes: list[str] = Field(min_length=1, max_length=5)
