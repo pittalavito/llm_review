@@ -1,10 +1,11 @@
 from agent.base import BaseAgent
-from graph.nodes._factory import compact_reviews, last_reviews, make_node
+from agent.prompting.meta_reviewer import build_message
+from graph.nodes._factory import make_node
 from graph.state import ReviewState
 
 
 def _build_message(state: ReviewState) -> str:
-    return compact_reviews(last_reviews(state))
+    return build_message(state)
 
 
 def _update(state, response, run) -> dict:

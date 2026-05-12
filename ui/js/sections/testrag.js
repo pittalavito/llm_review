@@ -1,7 +1,7 @@
 /**
  * sections/testrag.js — Test RAG section.
  *
- * Covers the following /dev endpoints:
+ * Covers the following /llm-review endpoints:
  *   GET  /papers                    → listPapers()
  *   POST /papers/index              → indexPaper()
  *   GET  /papers/indexed            → listIndexedPapers()

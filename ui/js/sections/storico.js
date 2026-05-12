@@ -3,7 +3,7 @@
  * Lists past graph runs and allows exploring per-agent traces.
  */
 
-import { listRuns, getRun } from '../api.js';
+import { listRuns, getRun, getRunAgentRuns } from '../api.js';
 
 const AGENT_LABELS = {
   reviewer_1:    '🔬 Reviewer 1',
@@ -70,7 +70,11 @@ export async function mount(el) {
     detailPane.hidden = false;
     detailPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
     try {
-      const record = await getRun(runId);
+      const [record, agentRuns] = await Promise.all([
+        getRun(runId),
+        getRunAgentRuns(runId),
+      ]);
+      record.agent_runs = agentRuns;
       renderDetail(detailPane, record);
     } catch (e) {
       detailPane.innerHTML = `<p class="error-msg">${e.message}</p>`;
@@ -123,10 +127,85 @@ function renderDetail(container, record) {
   const badge    = DECISION_BADGE[decision] || { label: decision.toUpperCase(), cls: 'badge--unknown' };
   const ts       = formatTimestamp(record.timestamp);
 
-  // Group agent_runs by round
+  const rounds = sortedUnique((record.agent_runs || []).map(ar => Number(ar.round ?? 0)));
+  const selectedRound = rounds.length ? rounds[0] : null;
+
+  const roundsHtml = buildRoundsHtml(record.agent_runs || [], null, selectedRound);
+
+  container.innerHTML = `
+    <div class="sto-detail-header">
+      <button id="sto-back-btn" class="btn btn--ghost btn--sm">← Storico</button>
+      <span class="badge ${badge.cls}">${badge.label}</span>
+      <span class="sto-detail-meta">${ts} · ${record.paper_path} · ${record.total_rounds} round${record.total_rounds !== 1 ? 's' : ''}</span>
+    </div>
+    ${renderGraphConfig(record.graph_config)}
+    ${renderTraceFilters(record.agent_runs || [], selectedRound)}
+    <div id="sto-rounds-container">${roundsHtml}</div>
+    ${record.author_response ? renderAuthorResponse(record.author_response) : ''}
+  `;
+
+  container.querySelector('#sto-back-btn').addEventListener('click', () => {
+    container.hidden = true;
+  });
+
+  const applyBtn = container.querySelector('#sto-apply-filter');
+  const resetBtn = container.querySelector('#sto-reset-filter');
+  const agentSel = container.querySelector('#sto-filter-agent');
+  const roundSel = container.querySelector('#sto-filter-round');
+  const roundsContainer = container.querySelector('#sto-rounds-container');
+
+  const renderFiltered = () => {
+    const selectedAgent = agentSel.value || null;
+    const selectedRoundValue = roundSel.value;
+    const selectedRoundIndex = selectedRoundValue === '' ? null : Number(selectedRoundValue);
+    roundsContainer.innerHTML = buildRoundsHtml(record.agent_runs || [], selectedAgent, selectedRoundIndex);
+  };
+
+  applyBtn.addEventListener('click', renderFiltered);
+  resetBtn.addEventListener('click', () => {
+    agentSel.value = '';
+    roundSel.value = selectedRound ?? '';
+    renderFiltered();
+  });
+}
+
+function renderTraceFilters(agentRuns, defaultRound) {
+  const agents = sortedUnique(agentRuns.map(ar => ar.agent));
+  const rounds = sortedUnique(agentRuns.map(ar => Number(ar.round ?? 0)));
+  return `
+    <div class="sto-filters">
+      <div class="form-group">
+        <label class="form-label" for="sto-filter-agent">Agente</label>
+        <select id="sto-filter-agent" class="form-select">
+          <option value="">Tutti</option>
+          ${agents.map(a => `<option value="${a}">${AGENT_LABELS[a] || a}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="sto-filter-round">Round</label>
+        <select id="sto-filter-round" class="form-select">
+          <option value="">Tutti</option>
+          ${rounds.map(r => `<option value="${r}" ${r === defaultRound ? 'selected' : ''}>Round ${r + 1}</option>`).join('')}
+        </select>
+      </div>
+      <div class="sto-filters-actions">
+        <button id="sto-apply-filter" class="btn btn--secondary btn--sm">Applica filtri</button>
+        <button id="sto-reset-filter" class="btn btn--ghost btn--sm">Reset</button>
+      </div>
+    </div>
+  `;
+}
+
+function buildRoundsHtml(agentRuns, selectedAgent, selectedRoundIndex) {
+  let filtered = [...agentRuns];
+  if (selectedAgent) filtered = filtered.filter(ar => ar.agent === selectedAgent);
+  if (selectedRoundIndex !== null && selectedRoundIndex !== undefined) {
+    filtered = filtered.filter(ar => Number(ar.round ?? 0) === selectedRoundIndex);
+  }
+
   const byRound = {};
-  for (const ar of (record.agent_runs || [])) {
-    const r = ar.round ?? 0;
+  for (const ar of filtered) {
+    const r = Number(ar.round ?? 0);
     if (!byRound[r]) byRound[r] = [];
     byRound[r].push(ar);
   }
@@ -136,20 +215,7 @@ function renderDetail(container, record) {
     .map(([round, runs]) => renderRound(Number(round), runs))
     .join('');
 
-  container.innerHTML = `
-    <div class="sto-detail-header">
-      <button id="sto-back-btn" class="btn btn--ghost btn--sm">← Storico</button>
-      <span class="badge ${badge.cls}">${badge.label}</span>
-      <span class="sto-detail-meta">${ts} · ${record.paper_path} · ${record.total_rounds} round${record.total_rounds !== 1 ? 's' : ''}</span>
-    </div>
-    ${renderGraphConfig(record.graph_config)}
-    ${roundsHtml}
-    ${record.author_response ? renderAuthorResponse(record.author_response) : ''}
-  `;
-
-  container.querySelector('#sto-back-btn').addEventListener('click', () => {
-    container.hidden = true;
-  });
+  return roundsHtml || '<p class="muted">Nessun agent run trovato con i filtri selezionati.</p>';
 }
 
 function renderGraphConfig(config) {
@@ -252,6 +318,52 @@ function renderAgentTrace(ar) {
           </div>
         </details>
 
+        ${renderPromptTrace(ar.prompt_trace)}
+        ${renderRuntimeTrace(ar.runtime_trace)}
+
+      </div>
+    </details>
+  `;
+}
+
+function renderPromptTrace(promptTrace) {
+  if (!promptTrace) return '';
+  const template = promptTrace.template || {};
+  const rendered = promptTrace.rendered || {};
+  return `
+    <details class="trace-section">
+      <summary>🧩 Prompt Trace</summary>
+      <div class="trace-response">
+        <p><strong>Template system:</strong></p>
+        <pre class="trace-pre">${escapeHtml(template.system || '')}</pre>
+        <p><strong>Template variables:</strong></p>
+        <pre class="trace-pre">${escapeHtml(JSON.stringify(template.variables || {}, null, 2))}</pre>
+        <p><strong>Rendered full prompt:</strong></p>
+        <pre class="trace-pre">${escapeHtml(rendered.full_prompt || '')}</pre>
+      </div>
+    </details>
+  `;
+}
+
+function renderRuntimeTrace(runtimeTrace) {
+  if (!runtimeTrace) return '';
+  const llm = runtimeTrace.llm || {};
+  const metrics = runtimeTrace.metrics || {};
+  const usage = runtimeTrace.provider_usage || {};
+  const retrieval = runtimeTrace.retrieval || null;
+
+  return `
+    <details class="trace-section">
+      <summary>📊 Runtime & Tokens</summary>
+      <div class="trace-response">
+        <p><strong>Model:</strong> ${escapeHtml(llm.model || llm.class || 'unknown')}</p>
+        <p><strong>Temperature:</strong> ${llm.temperature ?? 'n/a'}</p>
+        <p><strong>Latency:</strong> ${metrics.latency_ms ?? 'n/a'} ms</p>
+        <p><strong>Started:</strong> ${escapeHtml(metrics.started_at || '')}</p>
+        <p><strong>Ended:</strong> ${escapeHtml(metrics.ended_at || '')}</p>
+        <p><strong>Token usage:</strong></p>
+        <pre class="trace-pre">${escapeHtml(JSON.stringify(usage, null, 2))}</pre>
+        ${retrieval ? `<p><strong>Retrieval trace:</strong></p><pre class="trace-pre">${escapeHtml(JSON.stringify(retrieval, null, 2))}</pre>` : ''}
       </div>
     </details>
   `;
@@ -300,6 +412,10 @@ function escapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function sortedUnique(values) {
+  return [...new Set(values)].sort((a, b) => (a > b ? 1 : -1));
 }
 
 function showError(el, msg) { el.textContent = msg; el.hidden = false; }

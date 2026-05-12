@@ -75,6 +75,8 @@ def make_node(
             input_message=response.input_message or message,
             context_used=response.context_used,
             response_payload=response.payload.model_dump(),
+            prompt_trace=response.prompt_trace,
+            runtime_trace=response.runtime_trace,
         )
         return build_update(state, response, run)
     return node

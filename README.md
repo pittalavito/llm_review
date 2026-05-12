@@ -38,23 +38,23 @@ flowchart TD
 
 ## API (dev)
 
-All endpoints are under /dev.
+All endpoints are under /llm-review.
 
-- GET /dev/health
-- GET /dev/models
-- POST /dev/test-llm
-- GET /dev/agents
-- POST /dev/agents
-- GET /dev/graph-config
-- PUT /dev/graph-config
-- POST /dev/graph-run
-- POST /dev/graph-run-file
+- GET /llm-review/health
+- GET /llm-review/models
+- POST /llm-review/test-llm
+- GET /llm-review/agents
+- POST /llm-review/agents
+- GET /llm-review/graph-config
+- PUT /llm-review/graph-config
+- POST /llm-review/graph-run
+- POST /llm-review/graph-run-file
 
 
 ## Run Modes
 
-- Text mode: pass paper text directly to /dev/graph-run.
-- File mode: pass relative paper path (resource/papers) to /dev/graph-run-file, with BM25 retrieval and per-agent query.
+- Text mode: pass paper text directly to /llm-review/graph-run.
+- File mode: pass relative paper path (resource/papers) to /llm-review/graph-run-file, with BM25 retrieval and per-agent query.
 
 ## Scripts
 

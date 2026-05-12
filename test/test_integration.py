@@ -9,14 +9,19 @@ import sys
 import copy
 import pytest
 
-sys.path.insert(0, "src")
-
 from config import Config
 from container import Container
 from models.agent import AgentName, LlmModelName
+from service.agent_service import AgentService
+from client.mock_chat import MockChatModel
+from models.retrieval import FileSignature
+from service.retrieval_service import RetrievalService
+from agent.impl.reviewer_agent import ReviewerAgent
+from models.agent import AgentResponse
+
+sys.path.insert(0, "src")
 
 PAPER_PATH = "2566_Robust_agents_learn_causa.pdf"
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -98,41 +103,31 @@ class TestContainer:
 class TestAgentServiceClientFactory:
 
     def test_mock_client_created(self, config):
-        from service.agent_service import AgentService
-        from client.mock_chat import MockChatModel
         svc = AgentService(config)
         assert isinstance(svc.init_client(LlmModelName.MOCK, 0.0), MockChatModel)
 
     def test_client_cached_on_second_call(self, config):
-        from service.agent_service import AgentService
         svc = AgentService(config)
         assert svc.init_client(LlmModelName.MOCK, 0.0) is svc.init_client(LlmModelName.MOCK, 0.0)
 
     def test_openai_raises_without_key(self):
-        from service.agent_service import AgentService
         svc = AgentService(Config(openai_api_key=None))
         with pytest.raises(ValueError, match="OPENAI_API_KEY"):
             svc.init_client(LlmModelName.OPENAI_GPT4O, 0.0)
 
     def test_anthropic_raises_without_key(self):
-        from service.agent_service import AgentService
         svc = AgentService(Config(anthropic_api_key=None))
         with pytest.raises(ValueError, match="ANTHROPIC"):
             svc.init_client(LlmModelName.ANTHROPIC_CLAUDE_SONNET, 0.0)
 
     def test_get_agent_class_reviewer(self):
-        from service.agent_service import AgentService
-        from agent.impl.reviewer_agent import ReviewerAgent
         assert AgentService.get_agent_class(AgentName.REVIEWER_1) is ReviewerAgent
 
     def test_get_agent_class_unknown_raises(self):
-        from service.agent_service import AgentService
         with pytest.raises(ValueError):
             AgentService.get_agent_class("nonexistent_agent")
 
     def test_run_agent_returns_agent_response(self, config):
-        from service.agent_service import AgentService
-        from models.agent import AgentResponse
         svc = AgentService(config)
         assert isinstance(
             svc.run_agent(AgentName.REVIEWER_1, LlmModelName.MOCK, 0.0, "analyse this"),
@@ -148,7 +143,6 @@ class TestRetrievalService:
 
     @pytest.fixture(scope="class")
     def svc(self):
-        from service.retrieval_service import RetrievalService
         return RetrievalService(Config())
 
     # -- list_papers ----------------------------------------------------------
@@ -213,7 +207,6 @@ class TestRetrievalService:
     # -- _is_index_valid branches ---------------------------------------------
 
     def test_is_index_valid_none_payload(self, svc):
-        from models.retrieval import FileSignature
         assert svc._is_index_valid(None, PAPER_PATH, FileSignature(mtime_ns=0, size=0)) is False
 
     def test_is_index_valid_path_mismatch(self, svc):
@@ -223,12 +216,10 @@ class TestRetrievalService:
         assert svc._is_index_valid(bad, PAPER_PATH, index.file_signature) is False
 
     def test_is_index_valid_mtime_mismatch(self, svc):
-        from models.retrieval import FileSignature
         index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
         assert svc._is_index_valid(index, PAPER_PATH, FileSignature(mtime_ns=0, size=index.file_signature.size)) is False
 
     def test_is_index_valid_size_mismatch(self, svc):
-        from models.retrieval import FileSignature
         index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
         assert svc._is_index_valid(index, PAPER_PATH, FileSignature(mtime_ns=index.file_signature.mtime_ns, size=0)) is False
 

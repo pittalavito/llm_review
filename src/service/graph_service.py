@@ -65,6 +65,17 @@ class GraphService:
     def get_run(self, run_id: str):
         return self._result_repository.get(run_id)
 
+    def get_agent_runs(self, run_id: str, agent_name: AgentName | None = None, round_index: int | None = None) -> list[dict]:
+        record = self._result_repository.get(run_id)
+        runs = record.agent_runs
+
+        if agent_name is not None:
+            runs = [r for r in runs if r.agent == agent_name]
+        if round_index is not None:
+            runs = [r for r in runs if r.round == round_index]
+
+        return [r.model_dump() for r in runs]
+
 
     def _build_initial_state(self, paper_path: str, retrieval_metadata: dict) -> ReviewState:
         return {

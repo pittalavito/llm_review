@@ -92,6 +92,9 @@ class Container:
     def get_run(self, run_id: str) -> dict:
         return self._graph_service.get_run(run_id).model_dump()
 
+    def get_agent_runs(self, run_id: str, agent_name=None, round_index: int | None = None) -> list[dict]:
+        return self._graph_service.get_agent_runs(run_id, agent_name=agent_name, round_index=round_index)
+
 
 def inject_container(request: Request) -> Container:
     return request.app.state.container

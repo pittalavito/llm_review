@@ -68,6 +68,8 @@ class AgentResponse(BaseModel, Generic[T]):
     payload: T
     input_message: str | None = None
     context_used: str | None = None
+    prompt_trace: dict[str, Any] | None = None
+    runtime_trace: dict[str, Any] | None = None
 
     def to_json(self) -> str:
         return self.model_dump_json(ensure_ascii=False)

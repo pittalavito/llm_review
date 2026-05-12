@@ -9,8 +9,6 @@ import sys
 import json
 import pytest
 
-sys.path.insert(0, "src")
-
 from models.agent import AgentName, ReviewDecision
 from agent.impl.reviewer_agent import ReviewerAgent
 from agent.impl.meta_reviewer import MetaReviewerAgent
@@ -24,7 +22,10 @@ from graph.nodes.author import author_node
 from graph.nodes.meta import meta_node
 from graph.nodes.reviewer import reviewer_node
 from graph.state import ReviewState
+from langgraph.graph import StateGraph
 
+
+sys.path.insert(0, "src")
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -82,7 +83,6 @@ def fake_reviews() -> list[str]:
 class TestGraphBuilderTopology:
 
     def test_build_returns_state_graph(self):
-        from langgraph.graph import StateGraph
         agents = make_agents()
         graph = GraphBuilder.build(agents)
         assert isinstance(graph, StateGraph)

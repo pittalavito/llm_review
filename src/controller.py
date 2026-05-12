@@ -1,7 +1,7 @@
 import logging
 
 from container import Container, inject_container
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from graph.config import GraphAgentConfig
 from models.controller import (
     GraphRunRequest,
@@ -14,7 +14,7 @@ from models.controller import (
 from models.agent import AgentName, LlmModelName
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/dev", tags=["dev"])
+router = APIRouter(prefix="/llm-review", tags=["dev"])
 
 
 def _http_error(exc: Exception, action: str, status: int = 500) -> HTTPException:
@@ -157,3 +157,18 @@ def get_run(run_id: str, container: Container = Depends(inject_container)) -> di
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise _http_error(exc, f"Load run '{run_id}'") from exc
+
+
+@router.get("/runs/{run_id}/agent-runs")
+def get_run_agent_runs(
+    run_id: str,
+    agent_name: AgentName | None = None,
+    round_index: int | None = Query(default=None, ge=0),
+    container: Container = Depends(inject_container),
+) -> list[dict]:
+    try:
+        return container.get_agent_runs(run_id, agent_name=agent_name, round_index=round_index)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise _http_error(exc, f"Load agent runs for '{run_id}'") from exc

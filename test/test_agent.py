@@ -8,10 +8,19 @@ Unit tests for the agent layer:
 """
 import sys
 import pytest
-
-sys.path.insert(0, "src")
+import json
 
 from pydantic import BaseModel
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_core.runnables import RunnableLambda
+from agent.base import BaseAgent
+from agent.impl.reviewer_agent import ReviewerAgent
+from agent.impl.meta_reviewer import MetaReviewerAgent
+from agent.impl.area_chair_agent import AreaChairAgent
+from agent.impl.author_agent import AuthorAgent
+from client.mock_chat import MockChatModel
 from models.agent import (
     AgentName,
     AgentResponse,
@@ -26,13 +35,8 @@ from models.agent import (
     MetaReviewResponse,
     AuthorResponse,
 )
-from agent.base import BaseAgent
-from agent.impl.reviewer_agent import ReviewerAgent
-from agent.impl.meta_reviewer import MetaReviewerAgent
-from agent.impl.area_chair_agent import AreaChairAgent
-from agent.impl.author_agent import AuthorAgent
-from client.mock_chat import MockChatModel
 
+sys.path.insert(0, "src")
 
 # ---------------------------------------------------------------------------
 # Helpers / stubs
@@ -72,12 +76,6 @@ class FakeContextProvider:
 # MockChatModel that returns a SimpleResponse JSON
 # ---------------------------------------------------------------------------
 
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
-from langchain_core.runnables import RunnableLambda
-
-
 class SimpleResponseMock(BaseChatModel):
     @property
     def _llm_type(self) -> str:
@@ -113,7 +111,6 @@ class TestAgentResponse:
         assert isinstance(r.to_json(), str)
 
     def test_to_json_roundtrip(self):
-        import json
         r = AgentResponse(agent=AgentName.REVIEWER_1, payload=SimpleResponse(value="roundtrip"))
         data = json.loads(r.to_json())
         assert data["payload"]["value"] == "roundtrip"
@@ -159,6 +156,45 @@ class TestBaseAgent:
         agent = ConcreteAgent(client=SimpleResponseMock(), context_provider=None)
         result = agent.run("analyse this paper", paper_path="paper.pdf")
         assert isinstance(result.payload, SimpleResponse)
+
+    def test_run_contains_runtime_metrics(self, agent):
+        result = agent.run("analyse this paper")
+        runtime = result.runtime_trace or {}
+        metrics = runtime.get("metrics") or {}
+        assert metrics.get("latency_ms") is not None
+        assert metrics.get("started_at")
+        assert metrics.get("ended_at")
+
+
+class UsageMetadataMock(BaseChatModel):
+    @property
+    def _llm_type(self) -> str:
+        return "usage-mock"
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs) -> ChatResult:
+        msg = AIMessage(
+            content="ok",
+            usage_metadata={"input_tokens": 12, "output_tokens": 7, "total_tokens": 19},
+            response_metadata={"model_name": "usage-mock-model"},
+        )
+        return ChatResult(generations=[ChatGeneration(message=msg)])
+
+
+class TestProviderUsageTrace:
+
+    def test_provider_usage_is_extracted(self):
+        agent = NoSchemaAgent(client=UsageMetadataMock())
+        result = agent.run("hello")
+        runtime = result.runtime_trace or {}
+        usage = runtime.get("provider_usage") or {}
+        assert usage.get("total_tokens") == 19
+
+    def test_provider_metadata_is_extracted(self):
+        agent = NoSchemaAgent(client=UsageMetadataMock())
+        result = agent.run("hello")
+        runtime = result.runtime_trace or {}
+        metadata = runtime.get("provider_metadata") or {}
+        assert metadata.get("model_name") == "usage-mock-model"
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +317,6 @@ class TestConcreteAgentsWithMock:
         assert result.payload.recommendation in {"accept", "minor_revision", "major_revision", "reject"}
 
     def test_to_json_serializable(self, mock_llm):
-        import json
         agent = ReviewerAgent(client=mock_llm, agent_name=AgentName.REVIEWER_1)
         result = agent.run("review this paper")
         data = json.loads(result.to_json())

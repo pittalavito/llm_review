@@ -1,4 +1,4 @@
-const BASE_URL = '/dev';
+const BASE_URL = '/llm-review';
 
 async function readJsonOrText(response) {
   const contentType = response.headers.get('content-type') || '';
@@ -21,7 +21,7 @@ async function throwForResponse(response) {
 }
 
 /**
- * GET /dev/health
+ * GET /llm-review/health
  * @returns {Promise<{ status: string, version: string }>}
  */
 export async function checkHealth() {
@@ -31,7 +31,7 @@ export async function checkHealth() {
 }
 
 /**
- * GET /dev/models
+ * GET /llm-review/models
  * @returns {Promise<string[]>}
  */
 export async function listModels() {
@@ -40,7 +40,7 @@ export async function listModels() {
   return res.json();
 }
 /**
- * POST /dev/test-llm
+ * POST /llm-review/test-llm
  * @param {string} message
  * @param {string} model
  * @param {number} [temperature]
@@ -58,7 +58,7 @@ export async function testLlm(message, model, temperature = 1) {
 }
 
 /**
- * GET /dev/agents
+ * GET /llm-review/agents
  * @returns {Promise<string[]>}
  */
 export async function listAgents() {
@@ -68,7 +68,7 @@ export async function listAgents() {
 }
 
 /**
- * POST /dev/agents
+ * POST /llm-review/agents
  * @param {{ name: string, model: string, temperature: number, message: string }} payload
  * @returns {Promise<{ agent: string, payload: Record<string, unknown> }>}
  */
@@ -93,7 +93,7 @@ export async function testAgent(payload) {
 }
 
 /**
- * POST /dev/agents/prompt-preview
+ * POST /llm-review/agents/prompt-preview
  * @param {{ name: string, message: string }} payload
  * @returns {Promise<{ agent: string, system_prompt: string, schema_instructions: string, message_section: string, full_prompt: string }>}
  */
@@ -108,7 +108,7 @@ export async function previewAgentPrompt(payload) {
 }
 
 /**
- * GET /dev/papers
+ * GET /llm-review/papers
  * @returns {Promise<string[]>}
  */
 export async function listPapers() {
@@ -118,7 +118,7 @@ export async function listPapers() {
 }
 
 /**
- * POST /dev/papers/index
+ * POST /llm-review/papers/index
  * @param {{ paper_path: string, force_reindex?: boolean }} payload
  * @returns {Promise<Record<string, unknown>>}
  */
@@ -133,7 +133,7 @@ export async function indexPaper(payload) {
 }
 
 /**
- * GET /dev/papers/indexed
+ * GET /llm-review/papers/indexed
  * @returns {Promise<string[]>}
  */
 export async function listIndexedPapers() {
@@ -143,7 +143,7 @@ export async function listIndexedPapers() {
 }
 
 /**
- * GET /dev/papers/indexed/detail?paper_path=…
+ * GET /llm-review/papers/indexed/detail?paper_path=…
  * @param {string} paperPath
  * @returns {Promise<Record<string, unknown>>}
  */
@@ -155,12 +155,12 @@ export async function getIndexedPaperDetail(paperPath) {
 }
 
 /**
- * POST /dev/graph/compile
+ * POST /llm-review/graph/compile
  * @param {object|null} graphConfig
  * @returns {Promise<{ status: string }>}
  */
 /**
- * GET /dev/graph/config
+ * GET /llm-review/graph/config
  * @returns {Promise<object|null>}
  */
 export async function getGraphConfig() {
@@ -180,7 +180,7 @@ export async function compileGraph(graphConfig = null) {
 }
 
 /**
- * POST /dev/graph/run
+ * POST /llm-review/graph/run
  * @param {{ paper_path: string, rag_top_k?: number, force_reindex?: boolean, graph_config?: object }} payload
  * @returns {Promise<object>}
  */
@@ -195,7 +195,7 @@ export async function runGraph(payload) {
 }
 
 /**
- * GET /dev/runs
+ * GET /llm-review/runs
  * @returns {Promise<Array<{ run_id: string, timestamp: string, paper_path: string, decision: string, total_rounds: number }>>}
  */
 export async function listRuns() {
@@ -205,7 +205,7 @@ export async function listRuns() {
 }
 
 /**
- * GET /dev/runs/{run_id}
+ * GET /llm-review/runs/{run_id}
  * @param {string} runId
  * @returns {Promise<object>}
  */
@@ -216,7 +216,25 @@ export async function getRun(runId) {
 }
 
 /**
- * POST /dev/agents/retrieval
+ * GET /llm-review/runs/{run_id}/agent-runs
+ * @param {string} runId
+ * @param {{ agent_name?: string, round_index?: number }} [filters]
+ * @returns {Promise<Array<Record<string, unknown>>>}
+ */
+export async function getRunAgentRuns(runId, filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.agent_name) params.set('agent_name', filters.agent_name);
+  if (Number.isInteger(filters.round_index)) params.set('round_index', String(filters.round_index));
+  const qs = params.toString();
+  const url = `${BASE_URL}/runs/${encodeURIComponent(runId)}/agent-runs${qs ? `?${qs}` : ''}`;
+
+  const res = await fetch(url);
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * POST /llm-review/agents/retrieval
  * @param {{ name: string, model: string, temperature: number, message: string, paper_path: string, top_k?: number }} payload
  * @returns {Promise<{ agent: string, payload: Record<string, unknown> }>}
  */

@@ -9,6 +9,8 @@ class AgentRun(BaseModel):
     input_message: str
     context_used: str | None     # RAG chunks injected (if any)
     response_payload: dict       # structured response
+    prompt_trace: dict | None = None
+    runtime_trace: dict | None = None
 
 
 class RunRecord(BaseModel):
