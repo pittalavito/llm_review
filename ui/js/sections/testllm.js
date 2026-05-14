@@ -17,6 +17,18 @@ export function render() {
       <select class="test-llm-model-bar__select" id="model-select">
         <option value="">Loading…</option>
       </select>
+
+      <label class="test-llm-model-bar__label" for="temperature-input">Temperature:</label>
+      <input
+        class="test-llm-model-bar__temperature"
+        id="temperature-input"
+        type="range"
+        min="0.1"
+        max="1"
+        step="0.1"
+        value="1"
+      />
+      <span class="test-llm-model-bar__temperature-value" id="temperature-value">1.0</span>
     </div>
 
     <div class="test-llm-messages" id="test-llm-messages">
@@ -51,6 +63,8 @@ export function mount(container) {
   const messages = container.querySelector('#test-llm-messages');
   const sendBtn = form.querySelector('button[type="submit"]');
   const modelSelect = container.querySelector('#model-select');
+  const temperatureInput = container.querySelector('#temperature-input');
+  const temperatureValue = container.querySelector('#temperature-value');
 
   // Load available models into the select
   listModels()
@@ -93,7 +107,24 @@ export function mount(container) {
   function setLocked(locked) {
     input.disabled = locked;
     sendBtn.disabled = locked;
+    modelSelect.disabled = locked;
+    temperatureInput.disabled = locked;
   }
+
+  function readTemperature() {
+    const parsed = Number.parseFloat(temperatureInput.value);
+    if (!Number.isFinite(parsed)) return 1;
+    if (parsed < 0.1) return 0.1;
+    if (parsed > 1) return 1;
+    return parsed;
+  }
+
+  function renderTemperatureValue() {
+    temperatureValue.textContent = readTemperature().toFixed(1);
+  }
+
+  temperatureInput.addEventListener('input', renderTemperatureValue);
+  renderTemperatureValue();
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -105,6 +136,7 @@ export function mount(container) {
     setLocked(true);
 
     const selectedModel = modelSelect.value || 'mock';
+    const selectedTemperature = readTemperature();
     appendBubble(message, 'user');
 
     const loadingEl = document.createElement('div');
@@ -117,9 +149,9 @@ export function mount(container) {
     messages.scrollTop = messages.scrollHeight;
 
     try {
-      const data = await testLlm(message, selectedModel);
+      const data = await testLlm(message, selectedModel, selectedTemperature);
       loadingEl.remove();
-      appendBubble(data.response, 'bot');
+      appendBubble(typeof data === 'string' ? data : JSON.stringify(data), 'bot');
     } catch (err) {
       loadingEl.remove();
       const errBubble = appendBubble(`Error: ${err.message}`, 'bot');

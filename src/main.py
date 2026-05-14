@@ -1,19 +1,34 @@
 import logging
 
-from pathlib import Path
+from contextlib import asynccontextmanager
+from container import Container
+from controller import router as dev_router
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from uvicorn.logging import DefaultFormatter
+from config import Config, UI_DIR
 
-from controller import router as controller
-from container import CONFIG
+# 1. Configure logging and load configuration
+config = Config()
+log_level = getattr(logging, config.app_log_level.upper(), logging.INFO)
+_handler = logging.StreamHandler()
+_handler.setFormatter(DefaultFormatter("%(levelprefix)s %(message)s", use_colors=True))
+logging.root.setLevel(log_level)
+logging.root.handlers = [_handler]
+logger = logging.getLogger(__name__)
 
-_UI_DIR = (Path(__file__).parent.parent / "ui").resolve()
+# 2. Application lifespan management
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting up application lifespan...")
+    container = Container(config)
+    container.compile_graph()
+    app.state.container = container
+    logger.info("Graph compiled with default config.")
+    yield
+    logger.info("Shutting down application lifespan...")
 
-logging.basicConfig(level=logging.DEBUG,format="[%(levelname)s]: %(message)s")
-
-app = FastAPI(title=CONFIG.app_name, version=CONFIG.app_version)
-
-app.include_router(controller)
-
-app.mount("/ui", StaticFiles(directory=_UI_DIR, html=True), name="ui")
-
+# 3. Create FastAPI app and include routes
+app = FastAPI(lifespan=lifespan, title=config.app_name, version=config.app_version)
+app.include_router(dev_router)
+app.mount("/", StaticFiles(directory=UI_DIR, html=True), name="ui")

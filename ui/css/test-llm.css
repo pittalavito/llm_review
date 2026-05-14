@@ -43,10 +43,28 @@
   transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
 
+.test-llm-model-bar__temperature {
+  width: 120px;
+  accent-color: var(--c-accent);
+  cursor: pointer;
+}
+
 .test-llm-model-bar__select:focus {
   border-color: var(--c-accent);
   box-shadow: 0 0 0 2px rgba(197, 165, 90, 0.15);
   outline: none;
+}
+
+.test-llm-model-bar__temperature:focus {
+  box-shadow: 0 0 0 2px rgba(197, 165, 90, 0.15);
+  outline: none;
+}
+
+.test-llm-model-bar__temperature-value {
+  min-width: 2.4ch;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--c-text-secondary);
 }
 
 .test-llm-model-bar__select option {

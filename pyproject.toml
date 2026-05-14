@@ -9,11 +9,13 @@ dependencies = [
 	"pydantic>=2.10",
 	"langchain>=0.3",
 	"langgraph>=0.3",
+	"langchain-ollama>=0.3",
 	"langchain-openai>=0.3",
 	"langchain-anthropic>=0.3",
-	"langchain-google-genai>=2.1",
-	"langchain-ollama>=0.3",
 	"pydantic-settings>=2.0",
+	"openreview-py>=1.14.0",
+	"requests>=2.31.0",
+	"pypdf>=5.4.0"
 ]
 
 [project.optional-dependencies]
@@ -34,3 +36,12 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["test"]
 asyncio_mode = "auto"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=0.25",
+    "pytest-cov>=7.1.0",
+    "httpx>=0.28",
+    "psutil>=6.0",
+]

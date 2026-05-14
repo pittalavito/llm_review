@@ -1,0 +1,334 @@
+"""
+Controller tests for all /llm-review/* HTTP endpoints.
+Uses FastAPI TestClient with a pre-built container (mock model, no real LLM).
+"""
+import sys
+import pytest
+
+from main import app
+from fastapi.testclient import TestClient
+from unittest.mock import patch
+from config import Config
+from container import Container
+from models.agent import AgentName, LlmModelName
+
+sys.path.insert(0, "src")
+
+PAPER_PATH = "2566_Robust_agents_learn_causa.pdf"
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def config():
+    return Config()
+
+
+@pytest.fixture(scope="module")
+def container(config):
+    c = Container(config)
+    c.compile_graph()
+    return c
+
+
+@pytest.fixture(scope="module")
+def client(config, container):
+    app.state.container = container
+    return TestClient(app, raise_server_exceptions=True)
+
+
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
+
+class TestHealthEndpoint:
+
+    def test_health_returns_200(self, client):
+        r = client.get("/llm-review/health")
+        assert r.status_code == 200
+
+    def test_health_body_has_status(self, client):
+        r = client.get("/llm-review/health")
+        assert r.json()["status"] == "ok"
+
+
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
+
+class TestModelsEndpoint:
+
+    def test_models_returns_200(self, client):
+        r = client.get("/llm-review/models")
+        assert r.status_code == 200
+
+    def test_models_contains_mock(self, client):
+        r = client.get("/llm-review/models")
+        assert LlmModelName.MOCK in r.json()
+
+
+# ---------------------------------------------------------------------------
+# Test LLM
+# ---------------------------------------------------------------------------
+
+class TestTestLlmEndpoint:
+
+    def test_test_llm_mock_returns_200(self, client):
+        r = client.post("/llm-review/test-llm", json={
+            "model": LlmModelName.MOCK,
+            "temperature": 0.0,
+            "message": "hello",
+        })
+        assert r.status_code == 200
+
+    def test_test_llm_returns_string(self, client):
+        r = client.post("/llm-review/test-llm", json={
+            "model": LlmModelName.MOCK,
+            "temperature": 0.0,
+            "message": "hello",
+        })
+        assert isinstance(r.json(), str)
+
+    def test_test_llm_error_returns_500(self, client):
+        with patch("container.Container.test_llm", side_effect=RuntimeError("boom")):
+            r = client.post("/llm-review/test-llm", json={
+                "model": LlmModelName.MOCK,
+                "temperature": 0.0,
+                "message": "hello",
+            })
+        assert r.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# Agents
+# ---------------------------------------------------------------------------
+
+class TestAgentsEndpoint:
+
+    def test_list_agents_returns_200(self, client):
+        r = client.get("/llm-review/agents")
+        assert r.status_code == 200
+
+    def test_list_agents_contains_all(self, client):
+        names = client.get("/llm-review/agents").json()
+        for name in AgentName:
+            assert name in names
+
+    def test_test_agent_with_mock_returns_200(self, client):
+        r = client.post("/llm-review/agents", json={
+            "name": AgentName.REVIEWER_1,
+            "model": LlmModelName.MOCK,
+            "temperature": 0.0,
+            "message": "review this paper",
+        })
+        assert r.status_code == 200
+
+    def test_test_agent_invalid_name_returns_422(self, client):
+        r = client.post("/llm-review/agents", json={
+            "name": "nonexistent",
+            "model": LlmModelName.MOCK,
+            "temperature": 0.0,
+            "message": "test",
+        })
+        assert r.status_code in {400, 422}
+
+    def test_test_agent_error_returns_500(self, client):
+        with patch("container.Container.test_agent", side_effect=RuntimeError("boom")):
+            r = client.post("/llm-review/agents", json={
+                "name": AgentName.REVIEWER_1,
+                "model": LlmModelName.MOCK,
+                "temperature": 0.0,
+                "message": "test",
+            })
+        assert r.status_code == 500
+
+    def test_prompt_preview_returns_200(self, client):
+        r = client.post("/llm-review/agents/prompt-preview", json={
+            "name": AgentName.REVIEWER_1,
+            "message": "review this paper",
+        })
+        assert r.status_code == 200
+
+    def test_prompt_preview_has_full_prompt(self, client):
+        r = client.post("/llm-review/agents/prompt-preview", json={
+            "name": AgentName.REVIEWER_1,
+            "message": "review this paper",
+        })
+        assert "full_prompt" in r.json()
+
+    def test_prompt_preview_error_returns_500(self, client):
+        with patch("container.Container.build_agent_prompt", side_effect=RuntimeError("boom")):
+            r = client.post("/llm-review/agents/prompt-preview", json={
+                "name": AgentName.REVIEWER_1,
+                "message": "test",
+            })
+        assert r.status_code == 500
+
+    def test_agent_with_retrieval_returns_200(self, client):
+        r = client.post("/llm-review/agents/retrieval", json={
+            "name": AgentName.REVIEWER_1,
+            "model": LlmModelName.MOCK,
+            "temperature": 0.0,
+            "message": "review this",
+            "paper_path": PAPER_PATH,
+        })
+        assert r.status_code == 200
+
+    def test_agent_with_retrieval_value_error_returns_400(self, client):
+        with patch("container.Container.test_agent_with_retrieval", side_effect=ValueError("bad paper")):
+            r = client.post("/llm-review/agents/retrieval", json={
+                "name": AgentName.REVIEWER_1,
+                "model": LlmModelName.MOCK,
+                "temperature": 0.0,
+                "message": "review this",
+                "paper_path": "nonexistent.pdf",
+            })
+        assert r.status_code == 400
+
+    def test_agent_with_retrieval_error_returns_500(self, client):
+        with patch("container.Container.test_agent_with_retrieval", side_effect=RuntimeError("boom")):
+            r = client.post("/llm-review/agents/retrieval", json={
+                "name": AgentName.REVIEWER_1,
+                "model": LlmModelName.MOCK,
+                "temperature": 0.0,
+                "message": "test",
+                "paper_path": PAPER_PATH,
+            })
+        assert r.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# Papers
+# ---------------------------------------------------------------------------
+
+class TestPapersEndpoint:
+
+    def test_list_papers_returns_200(self, client):
+        assert client.get("/llm-review/papers").status_code == 200
+
+    def test_list_papers_returns_list(self, client):
+        assert isinstance(client.get("/llm-review/papers").json(), list)
+
+    def test_list_indexed_returns_200(self, client):
+        assert client.get("/llm-review/papers/indexed").status_code == 200
+
+    def test_index_paper_invalid_path_returns_400(self, client):
+        r = client.post("/llm-review/papers/index", json={"paper_path": "nonexistent/paper.pdf"})
+        assert r.status_code == 400
+
+    def test_index_paper_error_returns_500(self, client):
+        with patch("container.Container.index_paper", side_effect=RuntimeError("boom")):
+            r = client.post("/llm-review/papers/index", json={"paper_path": PAPER_PATH})
+        assert r.status_code == 500
+
+    def test_get_indexed_detail_valid_paper_returns_200(self, client):
+        client.post("/llm-review/papers/index", json={"paper_path": PAPER_PATH, "force_reindex": True})
+        r = client.get("/llm-review/papers/indexed/detail", params={"paper_path": PAPER_PATH})
+        assert r.status_code == 200
+        assert r.json()["paper_path"] == PAPER_PATH
+
+    def test_get_indexed_detail_not_found_returns_404(self, client):
+        r = client.get("/llm-review/papers/indexed/detail", params={"paper_path": "nonexistent.pdf"})
+        assert r.status_code == 404
+
+    def test_get_indexed_detail_error_returns_500(self, client):
+        with patch("container.Container.get_indexed_paper", side_effect=RuntimeError("boom")):
+            r = client.get("/llm-review/papers/indexed/detail", params={"paper_path": PAPER_PATH})
+        assert r.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# Graph
+# ---------------------------------------------------------------------------
+
+class TestGraphEndpoints:
+
+    def test_compile_returns_200(self, client):
+        assert client.post("/llm-review/graph/compile", json=None).status_code == 200
+
+    def test_compile_status_compiled(self, client):
+        assert client.post("/llm-review/graph/compile", json=None).json()["status"] == "compiled"
+
+    def test_compile_error_returns_500(self, client):
+        with patch("container.Container.compile_graph", side_effect=RuntimeError("boom")):
+            r = client.post("/llm-review/graph/compile", json=None)
+        assert r.status_code == 500
+
+    def test_get_config_returns_200(self, client):
+        client.post("/llm-review/graph/compile", json=None)
+        assert client.get("/llm-review/graph/config").status_code == 200
+
+    def test_get_config_has_agents(self, client):
+        assert "agents" in client.get("/llm-review/graph/config").json()
+
+    def test_run_invalid_paper_returns_error(self, client):
+        r = client.post("/llm-review/graph/run", json={"paper_path": "nonexistent.pdf"})
+        assert r.status_code in {400, 409, 500}
+
+    def test_run_not_compiled_returns_409(self, client):
+        with patch("container.Container.invoke_graph", side_effect=RuntimeError("Graph not compiled")):
+            r = client.post("/llm-review/graph/run", json={"paper_path": PAPER_PATH})
+        assert r.status_code == 409
+
+    def test_run_generic_error_returns_500(self, client):
+        with patch("container.Container.invoke_graph", side_effect=Exception("boom")):
+            r = client.post("/llm-review/graph/run", json={"paper_path": PAPER_PATH})
+        assert r.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# Runs
+# ---------------------------------------------------------------------------
+
+class TestRunsEndpoints:
+
+    def test_list_runs_returns_200(self, client):
+        assert client.get("/llm-review/runs").status_code == 200
+
+    def test_list_runs_returns_list(self, client):
+        assert isinstance(client.get("/llm-review/runs").json(), list)
+
+    def test_get_run_not_found_returns_404(self, client):
+        assert client.get("/llm-review/runs/nonexistent-run-id").status_code == 404
+
+    def test_get_run_error_returns_500(self, client):
+        with patch("container.Container.get_run", side_effect=RuntimeError("boom")):
+            r = client.get("/llm-review/runs/some-run-id")
+        assert r.status_code == 500
+
+    def test_get_run_agent_runs_not_found_returns_404(self, client):
+        r = client.get("/llm-review/runs/nonexistent-run-id/agent-runs")
+        assert r.status_code == 404
+
+    def test_get_run_agent_runs_returns_200(self, client):
+        runs = client.get("/llm-review/runs").json()
+        assert runs, "Expected at least one run in history for this test"
+        run_id = runs[0]["run_id"]
+        r = client.get(f"/llm-review/runs/{run_id}/agent-runs")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+
+    def test_get_run_agent_runs_filter_by_agent(self, client):
+        runs = client.get("/llm-review/runs").json()
+        assert runs, "Expected at least one run in history for this test"
+        run_id = runs[0]["run_id"]
+        r = client.get(f"/llm-review/runs/{run_id}/agent-runs", params={"agent_name": AgentName.REVIEWER_1})
+        assert r.status_code == 200
+        for item in r.json():
+            assert item["agent"] == AgentName.REVIEWER_1
+
+    def test_get_run_agent_runs_filter_by_round(self, client):
+        runs = client.get("/llm-review/runs").json()
+        assert runs, "Expected at least one run in history for this test"
+        run_id = runs[0]["run_id"]
+        r = client.get(f"/llm-review/runs/{run_id}/agent-runs", params={"round_index": 0})
+        assert r.status_code == 200
+        for item in r.json():
+            assert item["round"] == 0
+
+    def test_get_run_agent_runs_error_returns_500(self, client):
+        with patch("container.Container.get_agent_runs", side_effect=RuntimeError("boom")):
+            r = client.get("/llm-review/runs/some-run-id/agent-runs")
+        assert r.status_code == 500

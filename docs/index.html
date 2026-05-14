@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LLM Review — Demo</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/variables.css" />
+    <link rel="stylesheet" href="css/reset.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/graphrun.css" />
+  </head>
+
+  <body>
+    <header class="header">
+      <h1 class="header__title">LLM Review</h1>
+      <p class="header__subtitle">Demo — Academic Peer Review Pipeline</p>
+    </header>
+
+    <div class="app-body">
+      <aside class="sidebar">
+        <nav>
+          <ul class="nav__list">
+            <li class="nav__group-title">Demo</li>
+            <li class="nav__item nav__item--active" data-section="pipeline">
+              <span class="nav__icon">◆</span>
+              <span class="nav__label">Pipeline</span>
+            </li>
+            <li class="nav__item" data-section="graph-config">
+              <span class="nav__icon">⚙</span>
+              <span class="nav__label">Graph Config</span>
+            </li>
+            <li class="nav__item" data-section="storico">
+              <span class="nav__icon">▶</span>
+              <span class="nav__label">Review History</span>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <main class="content" id="content-area"></main>
+    </div>
+
+    <script type="module" src="js/data.js"></script>
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
