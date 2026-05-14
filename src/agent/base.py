@@ -62,6 +62,7 @@ class BaseAgent(ABC, Generic[T]):
         logger.info(f"{_LOGGER_PREFIX} Running '{self.name}', ctx_len={len(context_block)}")
         try:
             result = self._chain.invoke({"message": normalized, "context": context_block})
+            
         except Exception as exc:
             raise AgentValidationError(str(exc)) from exc
 
@@ -108,7 +109,7 @@ class BaseAgent(ABC, Generic[T]):
             "system_prompt": system_content,
             "schema_instructions": schema_content,
             "message_section": human_content,
-            "full_prompt": PROMPT_SEPARATOR.join(parts),
+            "full_prompt": PROMPT_SEPARATOR.join(parts)
         }
 
     def _build_chain(self, client: BaseChatModel) -> Runnable:

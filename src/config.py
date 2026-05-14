@@ -32,9 +32,14 @@ class Config(BaseSettings):
     llm_debug_json_logs: bool = False
 
     # --- Ollama ---
-    ollama_url: str = "http://localhost:11434"
+    ollama_url: str | None = None
     ollama_num_predict: int = 2048
     ollama_keep_alive: str = "10m"
+    ollama_api_key: str | None = None
+
+    # --- Aitho ---
+    aitho_url: str | None = None
+    aitho_api_key: str | None = None
 
     # --- OpenAI ---
     openai_api_key: str | None = None

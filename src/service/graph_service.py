@@ -28,14 +28,12 @@ class GraphService:
         self._lock = RLock()
         self._result_repository = ResultRepository(RESULTS_DIR.resolve())
 
-
     def compile(self, agents: dict[AgentName, BaseAgent], graph_config: GraphAgentConfig) -> None:
         with self._lock:
             self._graph_config = graph_config
             self._graph = GraphBuilder.build(agents).compile()
         
         logger.info(f"{_LOGGER_PREFIX} Graph compiled — agents={len(agents)} max_rounds={graph_config.max_rounds}")
-
 
     def invoke(self, paper_path: str, force_reindex: bool = False) -> tuple[dict, dict]:
         if self._graph is None or self._graph_config is None:
@@ -52,7 +50,6 @@ class GraphService:
 
         return result, retrieval_metadata
 
-
     def get_graph_config(self) -> dict | None:
         if self._graph_config is None:
             return None
@@ -60,7 +57,6 @@ class GraphService:
 
     def list_runs(self):
         return self._result_repository.list()
-
 
     def get_run(self, run_id: str):
         return self._result_repository.get(run_id)
@@ -76,7 +72,6 @@ class GraphService:
 
         return [r.model_dump() for r in runs]
 
-
     def _build_initial_state(self, paper_path: str, retrieval_metadata: dict) -> ReviewState:
         return {
             "paper_path": paper_path,
@@ -91,7 +86,6 @@ class GraphService:
             "max_rounds": self._graph_config.max_rounds,
             "agent_runs": [],
         }
-
 
     def _save_run(self, result: dict, paper_path: str, retrieval_metadata: dict) -> None:
         try:

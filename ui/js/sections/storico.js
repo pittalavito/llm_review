@@ -226,7 +226,7 @@ function renderGraphConfig(config) {
     let persona = '';
     if (a.reviewer_persona) {
       const p = a.reviewer_persona;
-      persona = `${p.commitment} · ${p.intention} · ${p.knowledgeability}`;
+      persona = `${p.focus}, ${p.commitment}, ${p.intention}, ${p.knowledgeability}`;
     } else if (a.area_chair_style) {
       persona = a.area_chair_style;
     }
