@@ -4,6 +4,8 @@ Multi-agent system for automated scientific paper review. It simulates an ML/NLP
 
 Each agent in the graph is individually configurable with its own LLM model and temperature. The graph itself can be recompiled at runtime with a different agent configuration without restarting the server.
 
+Reviewers also expose persona axes that shape their behavior: **focus** (soundness, empirical, novelty), **commitment** (responsible/irresponsible), **intention** (benign/malicious), and **knowledgeability** (knowledgeable/unknowledgeable). The area chair has a configurable decision style (authoritarian, conformist, inclusive). These parameters allow fine-grained control over review dynamics and simulation of diverse committee compositions.
+
 ## Stack
 
 | Layer | Technologies |
@@ -21,12 +23,6 @@ Each agent in the graph is individually configurable with its own LLM model and 
 ## Review Graph
 
 6 nodes, 3 reviewers running **in parallel**:
-
-```
-Paper → fan-out → [ R1 (soundness) | R2 (empirical) | R3 (novelty) ] → fan-in
-  → Meta-Reviewer → Area Chair → accept/minor_revision → END
-                                → revise → Author Agent → loop | END
-```
 
 The loop feeds back to the fan-out node, re-launching reviewers in parallel with the author's rebuttal injected into each prompt.
 
