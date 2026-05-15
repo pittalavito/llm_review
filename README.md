@@ -25,7 +25,7 @@ https://pittalavito.github.io/llm_review/
 
 The loop feeds back to the fan-out node, re-launching reviewers in parallel with the author's rebuttal injected into each prompt.
 
-![Review Pipeline](doc/review_pipeline.svg)
+![Review Pipeline](docs/review_pipeline.svg)
 
 ## API
 
