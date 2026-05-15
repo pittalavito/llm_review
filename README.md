@@ -16,9 +16,8 @@ Reviewers also expose persona axes that shape their behavior: **focus** (soundne
 | Retrieval | Custom BM25, PyPDF for text extraction |
 | Tooling | uv, pytest, pytest-cov |
 
-## Version
-
-- 0.2.0
+## Demo static page
+https://pittalavito.github.io/llm_review/
 
 ## Review Graph
 
