@@ -26,7 +26,7 @@ Reviewers also expose persona axes that shape their behavior: **focus** (soundne
 
 The loop feeds back to the fan-out node, re-launching reviewers in parallel with the author's rebuttal injected into each prompt.
 
-![Review Pipeline](resource/review_pipeline_architecture.svg)
+![Review Pipeline](doc/review_pipeline.svg)
 
 ## API
 
