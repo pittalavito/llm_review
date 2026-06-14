@@ -18,6 +18,7 @@ class LlmModelName(StrEnum):
     OLLAMA_LLAMA32 = "llama3.2:3b"
     OLLAMA_GROQ_TOOL_USE = "llama3-groq-tool-use"
     OLLAMA_GEMMA_4 = "gemma4"
+    OLLAMA_GEMMA_3_4B = "gemma3:4b"
     # Aitho (cloud)
     AITHO_QWEN_3_6 = "qwen3.6:27b"
     # OpenAI
@@ -32,8 +33,10 @@ class LlmModelName(StrEnum):
 
     def is_ollama(self) -> bool:
         return self in {
-            self.OLLAMA_TINYLLAMA, self.OLLAMA_LLAMA32,
-            self.OLLAMA_GROQ_TOOL_USE, self.OLLAMA_GEMMA_4
+            self.OLLAMA_TINYLLAMA, 
+            self.OLLAMA_LLAMA32,
+            self.OLLAMA_GROQ_TOOL_USE, self.OLLAMA_GEMMA_4, 
+            self.OLLAMA_GEMMA_3_4B
         }
 
     def is_openai(self) -> bool:

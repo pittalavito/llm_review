@@ -25,8 +25,8 @@ class GraphAgentConfig(BaseModel):
 
     @staticmethod
     def default_config() -> "GraphAgentConfig":
-        _DEFAULT_MODEL = LlmModelName.MOCK
-        _DEFAULT_TEMPERATURE = 0.1
+        _DEFAULT_MODEL = LlmModelName.OPENAI_GPT4O_MINI
+        _DEFAULT_TEMPERATURE = 0.4
         # Each reviewer covers a distinct evaluation angle so the three reviews are complementary.
         agents = [
             AgentLLMConfig(
