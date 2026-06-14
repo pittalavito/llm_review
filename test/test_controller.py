@@ -264,17 +264,37 @@ class TestGraphEndpoints:
         assert "agents" in client.get("/llm-review/graph/config").json()
 
     def test_run_invalid_paper_returns_error(self, client):
-        r = client.post("/llm-review/graph/run", json={"paper_path": "nonexistent.pdf"})
+        r = client.post("/llm-review/graph/run", json={
+            "paper_path": "nonexistent.pdf",
+            "run_description": "Run con paper non valido",
+        })
         assert r.status_code in {400, 409, 500}
+
+    def test_run_missing_description_returns_422(self, client):
+        r = client.post("/llm-review/graph/run", json={"paper_path": PAPER_PATH})
+        assert r.status_code == 422
+
+    def test_run_blank_description_returns_422(self, client):
+        r = client.post("/llm-review/graph/run", json={
+            "paper_path": PAPER_PATH,
+            "run_description": "   ",
+        })
+        assert r.status_code == 422
 
     def test_run_not_compiled_returns_409(self, client):
         with patch("container.Container.invoke_graph", side_effect=RuntimeError("Graph not compiled")):
-            r = client.post("/llm-review/graph/run", json={"paper_path": PAPER_PATH})
+            r = client.post("/llm-review/graph/run", json={
+                "paper_path": PAPER_PATH,
+                "run_description": "Run senza grafo compilato",
+            })
         assert r.status_code == 409
 
     def test_run_generic_error_returns_500(self, client):
         with patch("container.Container.invoke_graph", side_effect=Exception("boom")):
-            r = client.post("/llm-review/graph/run", json={"paper_path": PAPER_PATH})
+            r = client.post("/llm-review/graph/run", json={
+                "paper_path": PAPER_PATH,
+                "run_description": "Run con errore generico",
+            })
         assert r.status_code == 500
 
 
@@ -289,6 +309,12 @@ class TestRunsEndpoints:
 
     def test_list_runs_returns_list(self, client):
         assert isinstance(client.get("/llm-review/runs").json(), list)
+
+    def test_list_runs_items_include_run_description(self, client):
+        runs = client.get("/llm-review/runs").json()
+        if not runs:
+            pytest.skip("No runs available to assert run_description field.")
+        assert "run_description" in runs[0]
 
     def test_get_run_not_found_returns_404(self, client):
         assert client.get("/llm-review/runs/nonexistent-run-id").status_code == 404

@@ -100,10 +100,14 @@ function renderList(container, runs, onRunClick) {
     const badge    = DECISION_BADGE[decision] || { label: decision.toUpperCase(), cls: 'badge--unknown' };
     const ts       = formatTimestamp(run.timestamp);
     const rounds   = run.total_rounds;
+    const runDescription = run.run_description ? escapeHtml(run.run_description) : '<span class="muted">Descrizione non disponibile</span>';
     return `
       <div class="sto-row" data-run-id="${run.run_id}">
         <span class="sto-ts">${ts}</span>
-        <span class="sto-paper">${run.paper_path}</span>
+        <div class="sto-main">
+          <span class="sto-paper">${run.paper_path}</span>
+          <span class="sto-description">${runDescription}</span>
+        </div>
         <span class="badge ${badge.cls}">${badge.label}</span>
         <span class="sto-rounds">${rounds} round${rounds !== 1 ? 's' : ''}</span>
         <button class="btn btn--ghost btn--sm sto-open-btn">Esplora →</button>
@@ -126,6 +130,9 @@ function renderDetail(container, record) {
   const decision = (record.decision || 'unknown').toLowerCase();
   const badge    = DECISION_BADGE[decision] || { label: decision.toUpperCase(), cls: 'badge--unknown' };
   const ts       = formatTimestamp(record.timestamp);
+  const runDescription = record.run_description
+    ? escapeHtml(record.run_description)
+    : '<span class="muted">Descrizione non disponibile</span>';
 
   const rounds = sortedUnique((record.agent_runs || []).map(ar => Number(ar.round ?? 0)));
   const selectedRound = rounds.length ? rounds[0] : null;
@@ -138,6 +145,7 @@ function renderDetail(container, record) {
       <span class="badge ${badge.cls}">${badge.label}</span>
       <span class="sto-detail-meta">${ts} · ${record.paper_path} · ${record.total_rounds} round${record.total_rounds !== 1 ? 's' : ''}</span>
     </div>
+    <p class="sto-detail-description"><strong>Descrizione run:</strong> ${runDescription}</p>
     ${renderGraphConfig(record.graph_config)}
     ${renderTraceFilters(record.agent_runs || [], selectedRound)}
     <div id="sto-rounds-container">${roundsHtml}</div>

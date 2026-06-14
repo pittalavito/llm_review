@@ -75,6 +75,7 @@ class PreviewPromptResponse(BaseModel):
 
 class GraphRunRequest(BaseModel):
     paper_path: str = Field(min_length=1, max_length=500)
+    run_description: str = Field(min_length=1, max_length=200)
     force_reindex: bool = False
     graph_config: GraphAgentConfig | None = None
 
@@ -82,3 +83,8 @@ class GraphRunRequest(BaseModel):
     @classmethod
     def validate_path(cls, value: str) -> str:
         return _strip_nonempty(value, "Paper path")
+
+    @field_validator("run_description")
+    @classmethod
+    def validate_run_description(cls, value: str) -> str:
+        return _strip_nonempty(value, "Run description")

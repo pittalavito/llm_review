@@ -18,6 +18,7 @@ class RunRecord(BaseModel):
     run_id: str                  # e.g. "2026-04-21T14-32-00_paper-name"
     timestamp: str               # ISO 8601
     paper_path: str
+    run_description: str | None = None
     decision: str | None
     total_rounds: int
     reviews: list[str] | None = None
@@ -34,5 +35,6 @@ class RunSummary(BaseModel):
     run_id: str
     timestamp: str
     paper_path: str
+    run_description: str | None = None
     decision: str | None
     total_rounds: int

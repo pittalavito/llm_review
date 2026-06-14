@@ -49,6 +49,7 @@ class ResultRepository:
                     run_id=record.run_id,
                     timestamp=record.timestamp,
                     paper_path=record.paper_path,
+                    run_description=record.run_description,
                     decision=record.decision,
                     total_rounds=record.total_rounds,
                 ))

@@ -35,7 +35,7 @@ class GraphService:
         
         logger.info(f"{_LOGGER_PREFIX} Graph compiled — agents={len(agents)} max_rounds={graph_config.max_rounds}")
 
-    def invoke(self, paper_path: str, force_reindex: bool = False) -> tuple[dict, dict]:
+    def invoke(self, paper_path: str, run_description: str, force_reindex: bool = False) -> tuple[dict, dict]:
         if self._graph is None or self._graph_config is None:
             raise RuntimeError(f"{_LOGGER_PREFIX} Graph not compiled. Call compile_graph() first.")
 
@@ -46,7 +46,7 @@ class GraphService:
         initial_state = self._build_initial_state(relative_path, retrieval_metadata)
         result = self._graph.invoke(initial_state)
 
-        self._save_run(result, relative_path, retrieval_metadata)
+        self._save_run(result, relative_path, run_description, retrieval_metadata)
 
         return result, retrieval_metadata
 
@@ -87,7 +87,7 @@ class GraphService:
             "agent_runs": [],
         }
 
-    def _save_run(self, result: dict, paper_path: str, retrieval_metadata: dict) -> None:
+    def _save_run(self, result: dict, paper_path: str, run_description: str, retrieval_metadata: dict) -> None:
         try:
             run_id = ResultRepository.build_run_id(paper_path)
             agent_runs = [AgentRun.model_validate(r) for r in result.get("agent_runs", [])]
@@ -95,6 +95,7 @@ class GraphService:
                 run_id=run_id,
                 timestamp=datetime.now(timezone.utc).isoformat(),
                 paper_path=paper_path,
+                run_description=run_description,
                 decision=result.get("decision"),
                 total_rounds=result.get("current_round", 0),
                 reviews=result.get("reviews"),

@@ -181,7 +181,7 @@ export async function compileGraph(graphConfig = null) {
 
 /**
  * POST /llm-review/graph/run
- * @param {{ paper_path: string, rag_top_k?: number, force_reindex?: boolean, graph_config?: object }} payload
+ * @param {{ paper_path: string, run_description: string, rag_top_k?: number, force_reindex?: boolean, graph_config?: object }} payload
  * @returns {Promise<object>}
  */
 export async function runGraph(payload) {
@@ -196,7 +196,7 @@ export async function runGraph(payload) {
 
 /**
  * GET /llm-review/runs
- * @returns {Promise<Array<{ run_id: string, timestamp: string, paper_path: string, decision: string, total_rounds: number }>>}
+ * @returns {Promise<Array<{ run_id: string, timestamp: string, paper_path: string, run_description?: string, decision: string, total_rounds: number }>>}
  */
 export async function listRuns() {
   const res = await fetch(`${BASE_URL}/runs`);

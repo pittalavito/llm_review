@@ -66,6 +66,17 @@ export function render() {
         </select>
       </div>
 
+      <div class="form-group">
+        <label class="form-label" for="gr-run-description">Descrizione run</label>
+        <textarea
+          id="gr-run-description"
+          class="form-textarea"
+          rows="3"
+          maxlength="200"
+          placeholder="Inserisci una breve descrizione del run (max 200 caratteri)..."
+        ></textarea>
+      </div>
+
       <div class="gr-globals">
         <div class="form-group form-group--inline">
           <label class="form-label">Force reindex</label>
@@ -103,6 +114,7 @@ export async function mount(el) {
   const runBtn        = el.querySelector('#gr-run-btn');
   const runStatus     = el.querySelector('#gr-run-status');
   const runError      = el.querySelector('#gr-run-error');
+  const runDescriptionEl = el.querySelector('#gr-run-description');
 
   let currentConfig = null;
   let models        = [];
@@ -185,7 +197,9 @@ export async function mount(el) {
 
   runBtn.addEventListener('click', async () => {
     const paper = paperSel.value;
+    const runDescription = runDescriptionEl.value.trim();
     if (!paper) { showError(runError, 'Seleziona un paper.'); return; }
+    if (!runDescription) { showError(runError, 'Inserisci una descrizione del run.'); return; }
 
     hideError(runError);
     runBtn.disabled = true;
@@ -196,6 +210,7 @@ export async function mount(el) {
     try {
       const result = await runGraph({
         paper_path:    paper,
+        run_description: runDescription,
         force_reindex: el.querySelector('#gr-force-reindex').checked,
       });
       runStatus.textContent = '✅ Completato';

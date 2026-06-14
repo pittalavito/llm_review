@@ -231,7 +231,9 @@ details[open] .gr-review-summary::before { transform: rotate(90deg); }
 }
 .sto-row:hover { border-color: var(--c-accent); }
 .sto-ts     { font-size: var(--text-xs); color: var(--c-text-muted); font-family: var(--font-mono); }
+.sto-main   { display: flex; flex-direction: column; min-width: 0; gap: var(--s-1); }
 .sto-paper  { font-size: var(--text-sm); color: var(--c-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sto-description { font-size: var(--text-xs); color: var(--c-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sto-rounds { font-size: var(--text-xs); color: var(--c-text-muted); }
 
 /* Detail */
@@ -243,6 +245,11 @@ details[open] .gr-review-summary::before { transform: rotate(90deg); }
   margin-bottom: var(--s-5);
 }
 .sto-detail-meta { font-size: var(--text-xs); color: var(--c-text-muted); }
+.sto-detail-description {
+  margin: 0 0 var(--s-4);
+  font-size: var(--text-sm);
+  color: var(--c-text-secondary);
+}
 
 .sto-filters {
   display: grid;
@@ -339,6 +346,10 @@ details[open] .sto-agent-summary::before { transform: rotate(90deg); }
   }
 
   .sto-paper {
+    white-space: normal;
+  }
+
+  .sto-description {
     white-space: normal;
   }
 }

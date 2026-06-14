@@ -16,7 +16,7 @@ if sync.returncode != 0:
     sys.exit(sync.returncode)
 
 result = subprocess.run(
-    cmd_prefix + ["run", "uvicorn", "main:app", "--app-dir", "src", "--reload", "--host", "0.0.0.0", "--port", "8080"],
+    cmd_prefix + ["run", "uvicorn", "main:app", "--app-dir", "src", "--reload", "--host", "0.0.0.0", "--port", "8081"],
     cwd=project_root,
 )
 sys.exit(result.returncode)
