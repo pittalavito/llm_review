@@ -58,4 +58,4 @@ class GraphAgentConfig(BaseModel):
             temperature=_DEFAULT_TEMPERATURE,
             area_chair_style=AreaChairStyle.INCLUSIVE,
         ))
-        return GraphAgentConfig(agents=agents, max_rounds=2)
+        return GraphAgentConfig(agents=agents, max_rounds=1)
