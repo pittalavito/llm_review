@@ -43,9 +43,12 @@ _FOCUS_RAG_SECTIONS = {
 }
 
 _BASE_SYSTEM_PROMPT = (
-    "You are a peer reviewer for an ML/NLP conference. "
-    "Evaluate the paper critically and specifically. "
-    "Be concrete, professional. Max 300 words."
+    "You are a peer reviewer for the International Conference on Learning Representations (ICLR). "
+    "ICLR values rigorous theory, strong empirical evaluation, and advances in representation "
+    "learning, deep learning, and reinforcement learning. "
+    "Use the ICLR rating scale: 10=strong accept, 8=accept, "
+    "6=marginally above threshold, 5=marginally below threshold, 3=reject, 1=strong reject. "
+    "Be concrete and specific. Max 400 words."
 )
 
 

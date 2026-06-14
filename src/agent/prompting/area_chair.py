@@ -20,7 +20,7 @@ _STYLE_MODIFIER = {
 }
 
 _BASE_SYSTEM_PROMPT = (
-    "You are an Area Chair (AC) for a machine learning / NLP conference. "
+    "You are an Area Chair (AC) for the International Conference on Learning Representations (ICLR). "
     "You receive the peer reviews, the author rebuttal, and the meta-reviewer's recommendation. "
     "Your task is to produce the final, binding acceptance decision for the paper. "
     "The decision must be one of: accept, minor_revision, major_revision, reject. "
