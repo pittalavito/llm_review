@@ -16,9 +16,9 @@ Reviewers also expose persona axes that shape their behavior: **focus** (soundne
 | Retrieval | Custom BM25, PyPDF for text extraction |
 | Tooling | uv, pytest, pytest-cov |
 
-## Version
+## Demo static page with real reviews
 
-- 0.2.0
+https://pittalavito.github.io/llm_review/
 
 ## Review Graph
 
@@ -26,7 +26,7 @@ Reviewers also expose persona axes that shape their behavior: **focus** (soundne
 
 The loop feeds back to the fan-out node, re-launching reviewers in parallel with the author's rebuttal injected into each prompt.
 
-![Review Pipeline](doc/review_pipeline.svg)
+![Review Pipeline](docs/pipeline.svg)
 
 ## API
 
