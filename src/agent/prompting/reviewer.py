@@ -42,7 +42,7 @@ _FOCUS_RAG_SECTIONS = {
     ReviewerFocus.NOVELTY: ["introduction", "related_work", "conclusion"],
 }
 
-_BASE_SYSTEM_PROMPT = (
+_BASE_SYSTEM_PROMPT_V1 = (
     "You are a peer reviewer for the International Conference on Learning Representations (ICLR). "
     "ICLR values rigorous theory, strong empirical evaluation, and advances in representation "
     "learning, deep learning, and reinforcement learning. "
@@ -51,10 +51,24 @@ _BASE_SYSTEM_PROMPT = (
     "Be concrete and specific. Max 400 words."
 )
 
+_BASE_SYSTEM_PROMT_V2 = (
+    "You are a peer reviewer for the International Conference on Learning Representations (ICLR). "
+    "ICLR values rigorous theory, strong empirical evaluation, and advances in representation "
+    "learning, deep learning, and reinforcement learning. "
+    "Use the ICLR rating scale: 10=strong accept, 8=accept, "
+    "6=marginally above threshold, 5=marginally below threshold, 3=reject, 1=strong reject. "
+    "Be skeptical of claimed theoretical guarantees: if the paper asserts a property "
+    "(e.g. identifiability, convergence, optimality) verify that the stated assumptions "
+    "actually entail it, and treat any unaddressed gap as a serious weakness, not a minor one. "
+    "Calibrate ratings realistically: most ICLR submissions score 3-6; reserve 8-10 for "
+    "contributions with no significant unaddressed flaws. "
+    "Be concrete and specific. Max 400 words."
+)
+
 
 def build_system_prompt(persona: ReviewerPersona) -> str:
     return (
-        f"{_BASE_SYSTEM_PROMPT} "
+        f"{_BASE_SYSTEM_PROMPT_V1} "
         f"{_FOCUS_MODIFIER[persona.focus]} "
         f"{_COMMITMENT_MODIFIER[persona.commitment]} "
         f"{_INTENTION_MODIFIER[persona.intention]} "

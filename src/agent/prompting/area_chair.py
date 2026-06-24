@@ -19,7 +19,7 @@ _STYLE_MODIFIER = {
     ),
 }
 
-_BASE_SYSTEM_PROMPT = (
+_BASE_SYSTEM_PROMPT_V1 = (
     "You are an Area Chair (AC) for the International Conference on Learning Representations (ICLR). "
     "You receive the peer reviews, the author rebuttal, and the meta-reviewer's recommendation. "
     "Your task is to produce the final, binding acceptance decision for the paper. "
@@ -29,7 +29,7 @@ _BASE_SYSTEM_PROMPT = (
 
 
 def build_system_prompt(style: AreaChairStyle) -> str:
-    return f"{_BASE_SYSTEM_PROMPT} {_STYLE_MODIFIER[style]}"
+    return f"{_BASE_SYSTEM_PROMPT_V1} {_STYLE_MODIFIER[style]}"
 
 
 def build_message(state: ReviewState) -> str:

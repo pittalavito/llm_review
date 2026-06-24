@@ -3,7 +3,7 @@ import json
 from graph.nodes._factory import last_reviews
 from graph.state import ReviewState
 
-_SYSTEM_PROMPT = (
+_SYSTEM_PROMPT_V1 = (
     "You are the author of a scientific paper that has just received peer reviews. "
     "Your task is to respond to the reviewers' critiques in three ways:\n"
     "1. Write a brief general rebuttal summarizing your overall response.\n"
@@ -17,7 +17,7 @@ _SYSTEM_PROMPT = (
 
 
 def build_system_prompt() -> str:
-    return _SYSTEM_PROMPT
+    return _SYSTEM_PROMPT_V1
 
 
 def build_message(state: ReviewState) -> str:
