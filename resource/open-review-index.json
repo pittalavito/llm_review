@@ -1,0 +1,132 @@
+[
+  {
+    "paper_path": "2580_when_should_agents_explore_",
+    "title": "When Should Agents Explore?",
+    "openreview_forum_id": "dEwfxt14bca",
+    "openreview_api_version": "v1",
+    "conference": "ICLR 2023",
+    "decision": "Accept",
+    "runs_system_promt_v1": [
+      {
+        "run_id": "2026-06-14T21-51-35_2580_when_should_agents_explore_",
+        "run_description": "all gpt-4o-mini clients 1 round"
+      },
+      {
+        "run_id": "2026-06-14T21-57-48_2580_when_should_agents_explore_",
+        "run_description": "all gpt-4o clients 1 round"
+      }
+    ]
+  },
+  {
+    "paper_path": "3199_causal_imitation_learning_via",
+    "title": "Causal Imitation Learning via Inverse Reinforcement Learning",
+    "openreview_forum_id": "B-z41MBL_tH",
+    "openreview_api_version": "v1",
+    "conference": "ICLR 2023",
+    "decision": "Accept",
+    "runs_system_promt_v1": [
+      {
+        "run_id": "2026-06-14T22-29-01_3199_causal_imitation_learning_via",
+        "run_description": "all gpt-4o-mini clients 1 round"
+      },
+      {
+        "run_id": "2026-06-14T22-30-19_3199_causal_imitation_learning_via",
+        "run_description": "all gpt-4o clients 1 round"
+      }
+    ]
+  },
+  {
+    "paper_path": "reg_237_unsupervised_learning_of_causa",
+    "title": "Unsupervised Learning of Causal Relationships from Unstructured Data",
+    "openreview_forum_id": "2xNKMFGPJU5",
+    "openreview_api_version": "v1",
+    "conference": "ICLR 2023",
+    "decision": "Reject",
+    "runs_system_promt_v1": [
+      {
+        "run_id": "2026-06-14T23-15-40_reg_237_unsupervised_learning_of_causa",
+        "run_description": "all gpt-4o clients 1 round"
+      },
+      {
+        "run_id": "2026-06-14T23-17-55_reg_237_unsupervised_learning_of_causa",
+        "run_description": "all gpt-4o-mini clients 1 round"
+      },
+      {
+        "run_id": "2026-06-15T08-06-26_reg_237_unsupervised_learning_of_causa",
+        "run_description": "reviwer mistral"
+      }
+    ]
+  },
+  {
+    "paper_path": "reg_2924_contrastive_unsupervised_learn",
+    "title": "Contrastive Learning as Goal-Conditioned Reinforcement Learning",
+    "openreview_forum_id": "7DtgxVZGj-y",
+    "openreview_api_version": "v1",
+    "conference": "ICLR 2023",
+    "decision": "Reject",
+    "runs_system_promt_v1": [
+      {
+        "run_id": "2026-06-14T23-20-03_reg_2924_contrastive_unsupervised_learn",
+        "run_description": "all gpt-4o-mini clients 1 round"
+      },
+      {
+        "run_id": "2026-06-14T23-22-05_reg_2924_contrastive_unsupervised_learn",
+        "run_description": "all gpt-4o clients 1 round"
+      }
+    ]
+  },
+  {
+    "paper_path": "reg_8088_A_Novel_Autoencoder_Based",
+    "title": "A Novel Autoencoder Based Approach for Counterfactual Estimation Using Sparsity Constraints",
+    "openreview_forum_id": "KpSNPeRuTf",
+    "openreview_api_version": "v2",
+    "conference": "ICLR 2024",
+    "decision": "Withdrawn (reviews: Reject)",
+    "runs_system_promt_v1": [
+      {
+        "run_id": "2026-06-15T20-50-29_reg_8088_A_Novel_Autoencoder_Based",
+        "run_description": "all gpt-4o-mini clients 1 round"
+      },
+      {
+        "run_id": "2026-06-15T20-52-19_reg_8088_A_Novel_Autoencoder_Based",
+        "run_description": "all gpt-4o clients 1 round"
+      },
+      {
+        "run_id": "2026-06-15T22-21-12_reg_8088_A_Novel_Autoencoder_Based",
+        "run_description": "reviwer mistral"
+      }
+    ]
+  },
+  {
+    "paper_path": "4264_A_Versatile_Causal_Discov",
+    "title": "A Versatile Causal Discovery Framework to Allow Causally-Related Hidden Variables",
+    "openreview_forum_id": "FhQSGhBlqv",
+    "openreview_api_version": "v2",
+    "conference": "ICLR 2024",
+    "decision": "Accept (poster)",
+    "runs_system_promt_v1": [
+      {
+        "run_id": "2026-06-15T21-44-11_4264_A_Versatile_Causal_Discov",
+        "run_description": "all gpt-4o clients 1 round"
+      }
+    ]
+  },
+  {
+    "paper_path": "reg_7229_A_Unified_Causal_View_of_",
+    "title": "A Unified Causal View of Instruction Tuning",
+    "openreview_forum_id": "lWXedJyLuL",
+    "openreview_api_version": "v2",
+    "conference": "ICLR 2024",
+    "decision": "Reject",
+    "runs_system_promt_v1": [
+      {
+        "run_id": "2026-06-15T21-46-33_reg_7229_A_Unified_Causal_View_of_",
+        "run_description": "all gpt-4o-mini clients 1 round"
+      },
+      {
+        "run_id": "2026-06-15T21-46-33_reg_7229_A_Unified_Causal_View_of_",
+        "run_description": "all gpt-4o clients 1 round"
+      }
+    ]
+  }
+]
