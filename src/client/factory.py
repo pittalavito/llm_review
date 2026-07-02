@@ -41,7 +41,8 @@ def _build_openai(model: LlmModelName, temperature: float, config: Config) -> Ba
     return ChatOpenAI(
         model=model, 
         api_key=config.openai_api_key, 
-        temperature=temperature
+        temperature=temperature,
+        #reasoning_effort="medium",   # minimal | low | medium | high
     )
 
 

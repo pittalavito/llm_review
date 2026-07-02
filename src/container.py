@@ -1,9 +1,12 @@
 from fastapi import Request
-from config import Config
+from config import Config, RESOURCE_DIR
 from graph.config import GraphAgentConfig
 from service.graph_service import GraphService
 from service.agent_service import AgentService
 from service.retrieval_service import RetrievalService
+from comparison.comparator import ReviewComparator
+
+_INDEX_PATH = RESOURCE_DIR / "open-review-index.json"
 
 
 class Container:
@@ -14,6 +17,10 @@ class Container:
         self._agent_service = AgentService(config)
         self._retrieval_service = RetrievalService(config)
         self._graph_service = GraphService(config, self._retrieval_service)
+        self._comparator = ReviewComparator(
+            results_dir=RESOURCE_DIR / "results",
+            index_path=_INDEX_PATH,
+        )
     
     
     def health_check(self) -> dict:
@@ -99,6 +106,12 @@ class Container:
 
     def get_agent_runs(self, run_id: str, agent_name=None, round_index: int | None = None) -> list[dict]:
         return self._graph_service.get_agent_runs(run_id, agent_name=agent_name, round_index=round_index)
+
+    def list_comparable_papers(self) -> list[dict]:
+        return self._comparator.list_papers()
+
+    def compare_paper(self, paper_path: str) -> dict:
+        return self._comparator.compare_paper(paper_path).model_dump()
 
 
 def inject_container(request: Request) -> Container:

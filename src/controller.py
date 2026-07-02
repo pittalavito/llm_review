@@ -160,6 +160,21 @@ def get_run(run_id: str, container: Container = Depends(inject_container)) -> di
         raise _http_error(exc, f"Load run '{run_id}'") from exc
 
 
+@router.get("/compare/papers")
+def list_comparable_papers(container: Container = Depends(inject_container)) -> list[dict]:
+    return container.list_comparable_papers()
+
+
+@router.get("/compare")
+def compare_paper(paper_path: str, container: Container = Depends(inject_container)) -> dict:
+    try:
+        return container.compare_paper(paper_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise _http_error(exc, f"Compare paper '{paper_path}'") from exc
+
+
 @router.get("/runs/{run_id}/agent-runs")
 def get_run_agent_runs(
     run_id: str,

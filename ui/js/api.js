@@ -238,6 +238,28 @@ export async function getRunAgentRuns(runId, filters = {}) {
  * @param {{ name: string, model: string, temperature: number, message: string, paper_path: string, top_k?: number }} payload
  * @returns {Promise<{ agent: string, payload: Record<string, unknown> }>}
  */
+/**
+ * GET /llm-review/compare/papers
+ * @returns {Promise<Array<{ paper_path: string, title: string, conference: string }>>}
+ */
+export async function listComparablePapers() {
+  const res = await fetch(`${BASE_URL}/compare/papers`);
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * GET /llm-review/compare?paper_path=…
+ * @param {string} paperPath
+ * @returns {Promise<object>}
+ */
+export async function comparePaper(paperPath) {
+  const params = new URLSearchParams({ paper_path: paperPath });
+  const res = await fetch(`${BASE_URL}/compare?${params}`);
+  await throwForResponse(res);
+  return res.json();
+}
+
 export async function testAgentWithRetrieval(payload) {
   const res = await fetch(`${BASE_URL}/agents/retrieval`, {
     method: 'POST',
