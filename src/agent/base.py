@@ -84,9 +84,10 @@ class BaseAgent(ABC, Generic[T]):
         )
 
     @classmethod
-    def build_preview(cls, message: str, context: str = "") -> dict:
+    def build_preview(cls, message: str, context: str = "",
+                      system_prompt_override: str | None = None) -> dict:
         prompt = ChatPromptTemplate.from_messages([
-            ("system", cls.get_system_prompt_for_preview()),
+            ("system", system_prompt_override or cls.get_system_prompt_for_preview()),
             ("human", "{context}{message}"),
         ])
         context_block = cls._format_context_block(context)

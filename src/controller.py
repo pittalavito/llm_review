@@ -3,23 +3,21 @@ import logging
 from container import Container, inject_container
 from fastapi import APIRouter, Depends, HTTPException, Query
 from graph.config import GraphAgentConfig
+from models.agent import AgentName, LlmModelName, agent_role
 from models.controller import (
     GraphRunRequest,
     IndexPaperRequest,
     PreviewPromptRequest,
+    PromptVersionCreateRequest,
+    PromptVersionUpdateRequest,
     TestAgentRequest,
     TestAgentWithRetrievalRequest,
     TestLlmRequest,
 )
-from models.agent import AgentName, LlmModelName
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/llm-review", tags=["dev"])
-
-
-def _http_error(exc: Exception, action: str, status: int = 500) -> HTTPException:
-    logger.exception("%s failed", action)
-    return HTTPException(status_code=status, detail=f"{action} error: {exc}")
 
 
 @router.get("/health", response_model=dict)
@@ -88,7 +86,14 @@ def test_agent(body: TestAgentRequest, container: Container = Depends(inject_con
 @router.post("/agents/prompt-preview")
 def agent_prompt_preview(body: PreviewPromptRequest, container: Container = Depends(inject_container)) -> dict:
     try:
-        return container.agent_service.build_prompt_preview(body.name, body.message)
+        override = None
+        if body.prompt_version:
+            override = container.prompt_repository.get_by_role_label(
+                agent_role(body.name), body.prompt_version
+            ).template
+        return container.agent_service.build_prompt_preview(body.name, body.message, override)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise _http_error(exc, f"Prompt preview '{body.name}'") from exc
 
@@ -110,6 +115,9 @@ def compile_graph(body: GraphAgentConfig | None = None, container: Container = D
     try:
         container.compile_graph(body)
         return {"status": "compiled"}
+    except ValueError as exc:
+        # e.g. unknown/inactive prompt_version label
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise _http_error(exc, "Graph compile") from exc
 
@@ -143,6 +151,57 @@ def run_graph(body: GraphRunRequest, container: Container = Depends(inject_conta
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise _http_error(exc, f"Graph run '{body.paper_path}'") from exc
+
+
+@router.get("/prompts")
+def list_prompt_versions(
+    agent_role: str | None = None,
+    include_inactive: bool = False,
+    container: Container = Depends(inject_container),
+) -> list[dict]:
+    """Registry metadata (template text only in the detail endpoint)."""
+    rows = container.prompt_repository.list(agent_role, include_inactive)
+    return [row.model_dump(exclude={"template"}) for row in rows]
+
+
+@router.get("/prompts/{version_id}")
+def get_prompt_version(version_id: int, container: Container = Depends(inject_container)) -> dict:
+    try:
+        return container.prompt_repository.get(version_id).model_dump()
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/prompts", status_code=201)
+def create_prompt_version(
+    body: PromptVersionCreateRequest, container: Container = Depends(inject_container)
+) -> dict:
+    """Register a new immutable prompt version."""
+    try:
+        row = container.prompt_repository.create(
+            body.agent_role, body.version_label, body.template, body.description
+        )
+        return row.model_dump()
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        raise _http_error(exc, f"Create prompt version '{body.agent_role}/{body.version_label}'") from exc
+
+
+@router.patch("/prompts/{version_id}")
+def update_prompt_version(
+    version_id: int,
+    body: PromptVersionUpdateRequest,
+    container: Container = Depends(inject_container),
+) -> dict:
+    """Update description/is_active only — templates are immutable."""
+    try:
+        row = container.prompt_repository.update_meta(
+            version_id, description=body.description, is_active=body.is_active
+        )
+        return row.model_dump()
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/runs")
@@ -188,3 +247,8 @@ def get_run_agent_runs(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise _http_error(exc, f"Load agent runs for '{run_id}'") from exc
+
+
+def _http_error(exc: Exception, action: str, status: int = 500) -> HTTPException:
+    logger.exception("%s failed", action)
+    return HTTPException(status_code=status, detail=f"{action} error: {exc}")

@@ -49,6 +49,15 @@ All endpoints under `/llm-review`.
 | GET | `/runs/{run_id}` | Single run detail |
 | GET | `/runs/{run_id}/agent-runs` | Agent traces (filter by name/round) |
 
+### Prompt versions
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/prompts` | List registered prompt versions (metadata) |
+| GET | `/prompts/{id}` | Version detail including template text |
+| POST | `/prompts` | Register a new immutable version (409 on duplicate role/label) |
+| PATCH | `/prompts/{id}` | Update description / is_active only |
+
 ### Comparison
 
 | Method | Endpoint | Description |
@@ -79,13 +88,19 @@ Run history is persisted in **SQLite** (`resource/db/llm-review.sqlite`, created
 ```
 RUN 1 ──< AGENT_RUN            (one row per agent invocation, ordered by id)
 RUN 1 ──< RUN_AGENT_CONFIG     (per-agent model/temperature/persona, from graph_config)
+PROMPT_VERSION 1 ──< RUN_AGENT_CONFIG   (which base prompt each agent used)
 ```
 
 | Table | Typed columns (extract) | JSON columns |
 |---|---|---|
 | `run` | run_id PK, timestamp, paper_path, decision, total_rounds, max_rounds, meta_overall_score | reviews, meta_review, area_chair_response, author_response, retrieval_metadata, graph_config |
 | `agent_run` | run_id FK, agent, round, rating, confidence, overall_score, decision, latency_ms, input/output/total_tokens | response_payload, prompt_trace, runtime_trace |
-| `run_agent_config` | run_id FK, agent_name, model, temperature, persona axes, area_chair_style | — |
+| `run_agent_config` | run_id FK, agent_name, model, temperature, prompt_version (+FK), persona axes, area_chair_style | — |
+| `prompt_version` | agent_role, version_label (UNIQUE pair), template, template_hash, description, is_active | — |
+
+### Prompt versioning
+
+Base system prompts live in the `prompt_version` table (seeded at startup from the code templates) and are **selectable per agent at compile time** via `prompt_version` in the graph config (default `"v1"`; the three reviewers share the `reviewer` role). Versions are **immutable**: a new text means a new version; only `description` and `is_active` can change. Every run records label + FK of the version each agent used, so results are always attributable to an exact prompt text. Persona/style modifiers remain code-side composition on top of the base template.
 
 Example analytical query (average reviewer rating by model and persona focus):
 
@@ -102,6 +117,8 @@ Legacy JSON runs under `resource/results/` can be imported (idempotent) with:
 ```
 uv run python scripts/import-runs.py
 ```
+
+There are deliberately no schema migrations (no Alembic): after a schema change, delete `resource/db/llm-review.sqlite*` and re-run the import — the JSON archive remains the recovery source.
 
 ### Redis cache for RAG indices
 
@@ -131,7 +148,7 @@ All cross-platform Python. Run with `uv run python scripts/<name>.py`.
 2. **No file upload from the UI** — a paper must be manually placed in `resource/papers/` and then indexed by hand.
 3. **Naive RAG** — the retrieval is basic and could be improved.
 4. **UI improvements** — the UI could be rebuilt with Streamlit.
-5. **Prompt versioning** — agent prompts could be versioned and persisted to the DB (schema is ready to grow a `prompt_version` table).
+5. ~~**Prompt versioning**~~ — **done**: base prompts live in the `prompt_version` table, are editable via the `/prompts` API, selectable per agent at compile time, and recorded per run.
 6. **Containerization** — Redis already runs via docker-compose; the app itself could be containerized too.
 7. **Custom mock runs** — allow building custom runs reusing real past responses as mocks, reading them from the DB/Redis.
 8. **Compare export** — add a UI function to export the comparison as CSV (can now be a SQL query → CSV endpoint) for use in the thesis.

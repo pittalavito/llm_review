@@ -358,3 +358,86 @@ class TestRunsEndpoints:
         with patch("service.graph_service.GraphService.get_agent_runs", side_effect=RuntimeError("boom")):
             r = client.get("/llm-review/runs/some-run-id/agent-runs")
         assert r.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# Prompt version endpoints
+# ---------------------------------------------------------------------------
+
+class TestPromptEndpoints:
+
+    def test_list_returns_seeded_versions_without_template(self, client):
+        r = client.get("/llm-review/prompts")
+        assert r.status_code == 200
+        versions = r.json()
+        pairs = {(v["agent_role"], v["version_label"]) for v in versions}
+        assert {("reviewer", "v1"), ("reviewer", "v2"), ("meta_reviewer", "v1")} <= pairs
+        assert all("template" not in v for v in versions)
+
+    def test_list_filter_by_role(self, client):
+        r = client.get("/llm-review/prompts", params={"agent_role": "reviewer"})
+        assert r.status_code == 200
+        assert {v["agent_role"] for v in r.json()} == {"reviewer"}
+
+    def test_detail_includes_template(self, client):
+        first = client.get("/llm-review/prompts").json()[0]
+        r = client.get(f"/llm-review/prompts/{first['id']}")
+        assert r.status_code == 200
+        assert r.json()["template"]
+
+    def test_detail_missing_returns_404(self, client):
+        assert client.get("/llm-review/prompts/99999").status_code == 404
+
+    def test_create_returns_201_then_conflict_409(self, client):
+        body = {"agent_role": "reviewer", "version_label": "v97",
+                "template": "Test template.", "description": "test"}
+        assert client.post("/llm-review/prompts", json=body).status_code == 201
+        assert client.post("/llm-review/prompts", json=body).status_code == 409
+
+    def test_create_invalid_role_returns_422(self, client):
+        body = {"agent_role": "banana", "version_label": "v1", "template": "x"}
+        assert client.post("/llm-review/prompts", json=body).status_code == 422
+
+    def test_patch_updates_metadata_only(self, client):
+        created = client.post("/llm-review/prompts", json={
+            "agent_role": "reviewer", "version_label": "v98", "template": "Immutable text.",
+        }).json()
+        r = client.patch(f"/llm-review/prompts/{created['id']}",
+                         json={"description": "updated", "is_active": False})
+        assert r.status_code == 200
+        assert r.json()["description"] == "updated"
+        assert r.json()["is_active"] is False
+        assert r.json()["template"] == "Immutable text."
+
+    def test_patch_missing_returns_404(self, client):
+        assert client.patch("/llm-review/prompts/99999", json={"description": "x"}).status_code == 404
+
+    def test_preview_with_version_uses_that_template(self, client):
+        r = client.post("/llm-review/agents/prompt-preview", json={
+            "name": AgentName.REVIEWER_1, "message": "Review this.", "prompt_version": "v2",
+        })
+        assert r.status_code == 200
+        assert "skeptical" in r.json()["system_prompt"].lower()
+
+    def test_preview_unknown_version_returns_400(self, client):
+        r = client.post("/llm-review/agents/prompt-preview", json={
+            "name": AgentName.REVIEWER_1, "message": "Review this.", "prompt_version": "v99",
+        })
+        assert r.status_code == 400
+
+    def test_compile_with_unknown_prompt_version_returns_400(self, client):
+        config = client.get("/llm-review/graph/config").json()
+        assert config, "graph should be compiled by the fixture"
+        config["agents"][0]["prompt_version"] = "v99"
+        assert client.post("/llm-review/graph/compile", json=config).status_code == 400
+
+    def test_compile_with_v2_reviewer_succeeds_and_shows_in_config(self, client):
+        config = client.get("/llm-review/graph/config").json()
+        for agent in config["agents"]:
+            if agent["agent_name"] == "reviewer_1":
+                agent["prompt_version"] = "v2"
+        assert client.post("/llm-review/graph/compile", json=config).status_code == 200
+        updated = client.get("/llm-review/graph/config").json()
+        by_name = {a["agent_name"]: a for a in updated["agents"]}
+        assert by_name["reviewer_1"]["prompt_version"] == "v2"
+        assert by_name["reviewer_2"]["prompt_version"] == "v1"
