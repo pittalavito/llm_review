@@ -13,6 +13,7 @@ PAPERS_DIR = RESOURCE_DIR / "papers"
 RAG_INDEX_DIR = RESOURCE_DIR / "rag-index"
 RESULTS_DIR = RESOURCE_DIR / "results"
 OPENREVIEW_DIR = RESOURCE_DIR / "openreview"
+DB_DIR = RESOURCE_DIR / "db"
 
 APP_VERSION = "0.1.0"
 
@@ -46,6 +47,14 @@ class Config(BaseSettings):
 
     # --- Anthropic ---
     anthropic_api_key: str | None = None
+
+    # --- Database ---
+    database_url: str | None = None      # None -> sqlite:///{DB_DIR}/llm-review.sqlite
+    db_echo: bool = False
+
+    # --- Redis ---
+    redis_url: str | None = None         # None -> RAG indices served from files only
+    redis_index_ttl_seconds: int = 604_800  # 7 days; 0 = cache entries never expire
 
     # --- Retrieval ---
     rag_chunk_size: int = 800

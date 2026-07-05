@@ -37,6 +37,9 @@ Thumbs.db
 # retrieval cache
 resource/rag-index/*.json
 
+# sqlite database (incl. WAL sidecar files)
+resource/db/
+
 # paper
 resource/paper/*.pdf
 resource/other

@@ -15,7 +15,9 @@ dependencies = [
 	"pydantic-settings>=2.0",
 	"openreview-py>=1.14.0",
 	"requests>=2.31.0",
-	"pypdf>=5.4.0"
+	"pypdf>=5.4.0",
+	"sqlmodel>=0.0.24",
+	"redis>=5.0"
 ]
 
 [project.optional-dependencies]
@@ -44,4 +46,5 @@ dev = [
     "pytest-cov>=7.1.0",
     "httpx>=0.28",
     "psutil>=6.0",
+    "fakeredis>=2.26",
 ]
