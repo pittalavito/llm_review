@@ -34,12 +34,21 @@ def _unwrap(content: dict) -> dict:
     }
 
 
+def _invitation_text(note: dict) -> str:
+    """Return a lowercased invitation string, handling both v1 (invitation: str)
+    and v2 (invitations: list) formats."""
+    raw = note.get("invitation") or note.get("invitations") or ""
+    if isinstance(raw, (list, tuple)):
+        raw = " ".join(str(x) for x in raw)
+    return str(raw).lower()
+
+
 class HumanReviewParser:
 
     def parse_reviews(self, notes: list[dict]) -> list[HumanReview]:
         reviews = []
         for note in notes:
-            invitation = (note.get("invitation") or "").lower()
+            invitation = _invitation_text(note)
             if not any(kw in invitation for kw in _REVIEW_KW):
                 continue
             c = _unwrap(note.get("content", {}))
@@ -62,7 +71,7 @@ class HumanReviewParser:
 
     def parse_meta_review(self, notes: list[dict]) -> HumanMetaReview | None:
         for note in notes:
-            invitation = (note.get("invitation") or "").lower()
+            invitation = _invitation_text(note)
             if not any(kw in invitation for kw in _META_KW):
                 continue
             c = _unwrap(note.get("content", {}))
@@ -75,7 +84,7 @@ class HumanReviewParser:
 
     def parse_decision(self, notes: list[dict]) -> str | None:
         for note in notes:
-            invitation = (note.get("invitation") or "").lower()
+            invitation = _invitation_text(note)
             if not any(kw in invitation for kw in _DECISION_KW):
                 continue
             c = _unwrap(note.get("content", {}))

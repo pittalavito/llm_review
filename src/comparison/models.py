@@ -46,13 +46,6 @@ class LLMAreaChair(BaseModel):
     confidence: int | None = None
 
 
-class ReviewPairComparison(BaseModel):
-    index: int
-    human: HumanReview | None = None
-    llm: LLMReview | None = None
-    rating_delta: int | None = None     # llm.rating - human.rating
-
-
 class PaperComparisonResult(BaseModel):
     run_id: str
     run_description: str | None = None
@@ -60,7 +53,7 @@ class PaperComparisonResult(BaseModel):
     decision_match: bool
     human_review_count: int
     llm_review_count: int
-    review_comparisons: list[ReviewPairComparison]
+    llm_reviews: list[LLMReview]
     human_meta_review: HumanMetaReview | None = None
     llm_meta_review: LLMMetaReview | None = None
     llm_area_chair: LLMAreaChair | None = None

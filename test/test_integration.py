@@ -21,7 +21,7 @@ from models.agent import AgentResponse
 
 sys.path.insert(0, "src")
 
-PAPER_PATH = "2566_Robust_agents_learn_causa.pdf"
+PAPER_PATH = "2580_when_should_agents_explore_.pdf"
 
 # ---------------------------------------------------------------------------
 # Fixtures

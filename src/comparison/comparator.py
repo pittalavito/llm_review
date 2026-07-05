@@ -10,7 +10,6 @@ from comparison.models import (
     LLMReview,
     PaperComparison,
     PaperComparisonResult,
-    ReviewPairComparison,
 )
 from comparison.openreview_client import OpenReviewClient
 from comparison.human_review_parser import HumanReviewParser
@@ -24,10 +23,10 @@ _REJECT_KW = {"reject"}
 
 class ReviewComparator:
 
-    def __init__(self, results_dir: Path, index_path: Path):
+    def __init__(self, results_dir: Path, index_path: Path, cache_dir: Path | None = None):
         self._repo = ResultRepository(results_dir)
         self._index: list[dict] = json.loads(index_path.read_text(encoding="utf-8"))
-        self._client = OpenReviewClient()
+        self._client = OpenReviewClient(cache_dir=cache_dir)
         self._parser = HumanReviewParser()
 
     # ------------------------------------------------------------------
@@ -45,7 +44,7 @@ class ReviewComparator:
         forum_id: str = entry["openreview_forum_id"]
         api_version: str = entry.get("openreview_api_version", "v1")
 
-        notes = self._client.fetch_notes(forum_id, api_version)
+        notes = self._client.fetch_notes(forum_id, api_version, cache_name=paper_path)
         human_reviews = self._parser.parse_reviews(notes)
         human_meta = self._parser.parse_meta_review(notes)
         human_decision: str = entry.get("decision") or self._parser.parse_decision(notes) or "unknown"
@@ -70,7 +69,7 @@ class ReviewComparator:
                 decision_match=self._decisions_match(human_decision, record.decision),
                 human_review_count=len(human_reviews),
                 llm_review_count=len(llm_reviews),
-                review_comparisons=self._align_reviews(human_reviews, llm_reviews),
+                llm_reviews=llm_reviews,
                 human_meta_review=human_meta,
                 llm_meta_review=llm_meta,
                 llm_area_chair=llm_ac,
@@ -135,18 +134,6 @@ class ReviewComparator:
             decision=ac.get("decision"),
             confidence=ac.get("confidence"),
         )
-
-    def _align_reviews(self, human, llm) -> list[ReviewPairComparison]:
-        length = max(len(human), len(llm), 1)
-        comparisons = []
-        for i in range(length):
-            h = human[i] if i < len(human) else None
-            l = llm[i] if i < len(llm) else None
-            delta = None
-            if h and l and h.rating is not None and l.rating is not None:
-                delta = l.rating - h.rating
-            comparisons.append(ReviewPairComparison(index=i, human=h, llm=l, rating_delta=delta))
-        return comparisons
 
     @staticmethod
     def _decisions_match(human: str, llm: str | None) -> bool:

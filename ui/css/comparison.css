@@ -95,75 +95,74 @@
   margin: var(--s-6) 0 var(--s-3);
 }
 
-/* ── Review pair grid ─────────────────────────────────── */
-.cmp-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-4);
+/* ── Review / meta table (listed, not paired) ─────────── */
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
   margin-bottom: var(--s-5);
   border: 1px solid var(--c-border);
   border-radius: var(--r-lg);
   overflow: hidden;
+  font-size: var(--text-sm);
 }
 
-.cmp-pair-header {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: var(--s-4);
-  padding: var(--s-3) var(--s-5);
+.cmp-table thead th {
+  text-align: left;
+  padding: var(--s-3) var(--s-4);
   background: var(--c-surface);
   border-bottom: 1px solid var(--c-border);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-muted);
+  font-weight: 700;
 }
 
-.cmp-pair-header .cmp-pair-index {
-  color: var(--c-accent);
+.cmp-table th.cmp-num,
+.cmp-table td.cmp-num {
+  text-align: right;
   font-family: var(--font-mono);
+  white-space: nowrap;
 }
 
-.cmp-delta {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
+.cmp-th-toggle { width: 2.4rem; }
+
+.cmp-row > td {
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-surface-raised);
+  border-bottom: 1px solid var(--c-border);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.cmp-row:hover > td { background: var(--c-surface); }
+
+.cmp-toggle-cell { text-align: center; }
+
+.cmp-toggle {
+  display: inline-block;
+  color: var(--c-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.cmp-row.is-open .cmp-toggle { transform: rotate(90deg); }
+
+.cmp-tag {
+  display: inline-block;
+  font-size: var(--text-xs);
   font-weight: 700;
   padding: 2px 10px;
   border-radius: var(--r-full);
+  letter-spacing: 0.04em;
 }
 
-.cmp-delta--pos  { background: rgba(78, 173, 122, 0.15); color: var(--c-success); }
-.cmp-delta--neg  { background: rgba(212,  92,  92, 0.15); color: var(--c-error);   }
-.cmp-delta--zero { background: rgba(138, 155, 184, 0.12); color: var(--c-text-secondary); }
+.cmp-tag--human { background: rgba(138, 155, 184, 0.15); color: var(--c-text-secondary); }
+.cmp-tag--llm   { background: rgba(120, 130, 240, 0.15); color: var(--c-accent-light); }
 
-.cmp-col {
-  padding: var(--s-4) var(--s-5);
-  background: var(--c-surface-raised);
-}
-
-.cmp-col:first-child { border-right: 1px solid var(--c-border); }
-
-.cmp-col-title {
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--c-text-muted);
-  margin-bottom: var(--s-3);
-}
-
-.cmp-score {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--c-accent-light);
-  margin-bottom: var(--s-3);
-}
-
-.cmp-score-conf {
-  font-size: var(--text-sm);
-  color: var(--c-text-muted);
-  margin-left: var(--s-2);
+.cmp-detail > td {
+  padding: var(--s-4) var(--s-5) var(--s-5);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
 }
 
 .cmp-field-label {
@@ -194,33 +193,6 @@
   font-size: var(--text-sm);
   color: var(--c-text-muted);
   font-style: italic;
-}
-
-/* ── Meta / AreaChair side-by-side ────────────────────── */
-.cmp-meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-4);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-
-.cmp-meta-col {
-  padding: var(--s-4) var(--s-5);
-  background: var(--c-surface-raised);
-}
-
-.cmp-meta-col:first-child {
-  border-right: 1px solid var(--c-border);
-}
-
-.cmp-meta-col-title {
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--c-text-muted);
-  margin-bottom: var(--s-3);
 }
 
 /* ── Loading / error states ───────────────────────────── */

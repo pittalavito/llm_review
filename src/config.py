@@ -12,6 +12,7 @@ RESOURCE_DIR = _ROOT / "resource"
 PAPERS_DIR = RESOURCE_DIR / "papers"
 RAG_INDEX_DIR = RESOURCE_DIR / "rag-index"
 RESULTS_DIR = RESOURCE_DIR / "results"
+OPENREVIEW_DIR = RESOURCE_DIR / "openreview"
 
 APP_VERSION = "0.1.0"
 

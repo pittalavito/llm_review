@@ -94,6 +94,7 @@ def extract_provider_usage(result: Any) -> dict[str, Any] | None:
     response_metadata = getattr(result, "response_metadata", None) or {}
     token_usage = response_metadata.get("token_usage")
     usage_fallback = response_metadata.get("usage")
+    
     if token_usage:
         return dict(token_usage)
     if usage_fallback:

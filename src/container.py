@@ -20,6 +20,7 @@ class Container:
         self._comparator = ReviewComparator(
             results_dir=RESOURCE_DIR / "results",
             index_path=_INDEX_PATH,
+            cache_dir=RESOURCE_DIR / "openreview",
         )
     
     
