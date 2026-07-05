@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+
 from graph.state import ReviewState, targeted_rebuttal
 from models.agent import (
     AgentName,
@@ -23,22 +25,30 @@ _KNOWLEDGEABILITY_MODIFIER = {
     ReviewerKnowledgeability.UNKNOWLEDGEABLE: "You have limited expertise in this area.",
 }
 
-_FOCUS_MODIFIER = {
-    ReviewerFocus.SOUNDNESS: "Focus: theoretical soundness - proofs, assumptions, mathematical rigor.",
-    ReviewerFocus.EMPIRICAL: "Focus: empirical validation - experiments, baselines, reproducibility.",
-    ReviewerFocus.NOVELTY: "Focus: novelty and impact - originality, related work, field influence.",
-}
+@dataclass(frozen=True)
+class FocusProfile:
+    """Prompt modifier plus RAG hints tied to a reviewer focus."""
+    modifier: str
+    rag_terms: str
+    rag_sections: list[str] = field(default_factory=list)
 
-_FOCUS_RAG_TERMS = {
-    ReviewerFocus.SOUNDNESS: "theorem proof lemma assumption formal analysis mathematical rigor",
-    ReviewerFocus.EMPIRICAL: "experiment results evaluation baseline dataset reproducibility ablation",
-    ReviewerFocus.NOVELTY: "related work novelty contribution state of the art impact limitation",
-}
 
-_FOCUS_RAG_SECTIONS = {
-    ReviewerFocus.SOUNDNESS: ["methods", "related_work"],
-    ReviewerFocus.EMPIRICAL: ["experiments", "results"],
-    ReviewerFocus.NOVELTY: ["introduction", "related_work", "conclusion"],
+_FOCUS_PROFILES = {
+    ReviewerFocus.SOUNDNESS: FocusProfile(
+        modifier="Focus: theoretical soundness - proofs, assumptions, mathematical rigor.",
+        rag_terms="theorem proof lemma assumption formal analysis mathematical rigor",
+        rag_sections=["methods", "related_work"],
+    ),
+    ReviewerFocus.EMPIRICAL: FocusProfile(
+        modifier="Focus: empirical validation - experiments, baselines, reproducibility.",
+        rag_terms="experiment results evaluation baseline dataset reproducibility ablation",
+        rag_sections=["experiments", "results"],
+    ),
+    ReviewerFocus.NOVELTY: FocusProfile(
+        modifier="Focus: novelty and impact - originality, related work, field influence.",
+        rag_terms="related work novelty contribution state of the art impact limitation",
+        rag_sections=["introduction", "related_work", "conclusion"],
+    ),
 }
 
 _BASE_SYSTEM_PROMPT_V1 = (
@@ -68,7 +78,7 @@ _BASE_SYSTEM_PROMT_V2 = (
 def build_system_prompt(persona: ReviewerPersona) -> str:
     return (
         f"{_BASE_SYSTEM_PROMPT_V1} "
-        f"{_FOCUS_MODIFIER[persona.focus]} "
+        f"{_FOCUS_PROFILES[persona.focus].modifier} "
         f"{_COMMITMENT_MODIFIER[persona.commitment]} "
         f"{_INTENTION_MODIFIER[persona.intention]} "
         f"{_KNOWLEDGEABILITY_MODIFIER[persona.knowledgeability]}"
@@ -76,7 +86,8 @@ def build_system_prompt(persona: ReviewerPersona) -> str:
 
 
 def get_rag_focus(persona: ReviewerPersona) -> tuple[str, list[str]]:
-    return _FOCUS_RAG_TERMS[persona.focus], _FOCUS_RAG_SECTIONS[persona.focus]
+    profile = _FOCUS_PROFILES[persona.focus]
+    return profile.rag_terms, profile.rag_sections
 
 
 def build_message(state: ReviewState, agent_name: AgentName) -> str:
