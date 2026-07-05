@@ -13,6 +13,7 @@ Reviewers also expose persona axes that shape their behavior: **focus** (soundne
 | Agent orchestration | LangGraph, LangChain |
 | Supported LLMs | Ollama (local), OpenAI, Anthropic |
 | Backend | FastAPI, Uvicorn, Pydantic |
+| Persistence | SQLite via SQLModel (runs), Redis cache (RAG indices), Docker Compose |
 | Retrieval | Custom BM25, PyPDF for text extraction |
 | Tooling | uv, pytest, pytest-cov |
 
@@ -71,6 +72,46 @@ All endpoints under `/llm-review`.
 | GET | `/papers/indexed` | List indexed papers |
 | GET | `/papers/indexed/detail` | Index detail for a single paper |
 
+## Database
+
+Run history is persisted in **SQLite** (`resource/db/llm-review.sqlite`, created automatically at startup) through **SQLModel**. Design principle: analytical facts live in typed, CHECK-constrained, indexed columns; full payloads are preserved verbatim in JSON columns for audit and API fidelity.
+
+```
+RUN 1 ──< AGENT_RUN            (one row per agent invocation, ordered by id)
+RUN 1 ──< RUN_AGENT_CONFIG     (per-agent model/temperature/persona, from graph_config)
+```
+
+| Table | Typed columns (extract) | JSON columns |
+|---|---|---|
+| `run` | run_id PK, timestamp, paper_path, decision, total_rounds, max_rounds, meta_overall_score | reviews, meta_review, area_chair_response, author_response, retrieval_metadata, graph_config |
+| `agent_run` | run_id FK, agent, round, rating, confidence, overall_score, decision, latency_ms, input/output/total_tokens | response_payload, prompt_trace, runtime_trace |
+| `run_agent_config` | run_id FK, agent_name, model, temperature, persona axes, area_chair_style | — |
+
+Example analytical query (average reviewer rating by model and persona focus):
+
+```sql
+SELECT c.model, c.persona_focus, AVG(a.rating)
+FROM agent_run a
+JOIN run_agent_config c ON a.run_id = c.run_id AND a.agent = c.agent_name
+WHERE a.rating IS NOT NULL
+GROUP BY c.model, c.persona_focus;
+```
+
+Legacy JSON runs under `resource/results/` can be imported (idempotent) with:
+
+```
+uv run python scripts/import-runs.py
+```
+
+### Redis cache for RAG indices
+
+BM25 indices (JSON files keyed by SHA-256 under `resource/rag-index/`) are served through a **cache-aside** Redis layer: files remain the source of truth, Redis is a pure read accelerator. If `REDIS_URL` is unset or Redis is unreachable, the app transparently falls back to file-only access (single warning, no crash).
+
+```
+docker compose up -d          # starts redis:7.4-alpine on localhost:6380
+# .env: REDIS_URL=redis://localhost:6380/0
+```
+
 ## Scripts
 
 All cross-platform Python. Run with `uv run python scripts/<name>.py`.
@@ -78,19 +119,20 @@ All cross-platform Python. Run with `uv run python scripts/<name>.py`.
 | Script | Command | Description |
 |---|---|---|
 | start-venv | `uv run python scripts/start-venv.py` | Create `.venv` and install dependencies |
-| run-app | `uv run python scripts/run-app.py` | Start uvicorn on port 8080 |
+| run-app | `uv run python scripts/run-app.py` | Start uvicorn on port 8081 |
 | run-test | `uv run python scripts/run-test.py` | Run pytest with coverage |
 | stop-app | `uv run python scripts/stop-app.py` | Kill the uvicorn process |
 | clean-cache | `uv run python scripts/clean-cache.py` | Remove Python cache artifacts |
+| import-runs | `uv run python scripts/import-runs.py` | Import legacy JSON runs into SQLite (idempotent) |
 
 ## Todo / Future work
 
-1. **No DB/FTP integration** — all processed files (RAG index, papers, runs...) live under `resource/`.
+1. ~~**No DB/FTP integration**~~ — **done**: runs live in SQLite (SQLModel), RAG indices are cached in Redis with file fallback. Papers are still plain files under `resource/papers/`.
 2. **No file upload from the UI** — a paper must be manually placed in `resource/papers/` and then indexed by hand.
 3. **Naive RAG** — the retrieval is basic and could be improved.
 4. **UI improvements** — the UI could be rebuilt with Streamlit.
-5. **Prompt versioning** — agent prompts could be versioned and persisted to a DB.
-6. **Containerization** — the app could be packaged with Docker.
-7. **Custom mock runs** — allow building custom runs reusing real past responses as mocks, but only after storing them in a DB (e.g. Redis).
-8. **Compare export** — add a UI function to export the comparison as CSV for use in the thesis.
+5. **Prompt versioning** — agent prompts could be versioned and persisted to the DB (schema is ready to grow a `prompt_version` table).
+6. **Containerization** — Redis already runs via docker-compose; the app itself could be containerized too.
+7. **Custom mock runs** — allow building custom runs reusing real past responses as mocks, reading them from the DB/Redis.
+8. **Compare export** — add a UI function to export the comparison as CSV (can now be a SQL query → CSV endpoint) for use in the thesis.
 9. **Dynamic review scope** — let agents set the review scope dynamically (e.g. ICLR, LMN, Other).
