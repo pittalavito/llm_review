@@ -24,8 +24,6 @@ class BM25Ranker:
         candidates = self._select_candidates(payload.chunks, sections, top_k_value)
         return self._bm25_rank(candidates, payload.doc_freq, query_tokens, top_k_value, len(payload.chunks))
 
-    # ------------------------------------------------------------------
-
     def _select_candidates(
         self,
         chunks: list[IndexedChunk],

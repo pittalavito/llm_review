@@ -7,11 +7,10 @@ from models.retrieval import Index
 
 class IndexRepository:
     """Persists and loads RAG index payloads from disk.
-
     Follows the Repository pattern: abstracts storage details
     from the rest of the application.
     """
-
+    
     def __init__(self, index_dir: Path):
         self.index_dir = index_dir.resolve()
         self.index_dir.mkdir(parents=True, exist_ok=True)
