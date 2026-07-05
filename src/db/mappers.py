@@ -126,6 +126,7 @@ def _config_rows(run_id: str, graph_config: dict) -> list[RunAgentConfigTable]:
             agent_name=agent_name,
             model=model,
             temperature=temperature,
+            prompt_version=_as_str(entry.get("prompt_version")),
             persona_commitment=_as_str(persona.get("commitment")),
             persona_intention=_as_str(persona.get("intention")),
             persona_knowledgeability=_as_str(persona.get("knowledgeability")),

@@ -76,6 +76,7 @@ def make_record(run_id: str = "2026-07-05T10-00-00_test_paper") -> RunRecord:
                     "agent_name": "reviewer_1",
                     "model": "mock",
                     "temperature": 0.4,
+                    "prompt_version": "v1",
                     "reviewer_persona": {
                         "commitment": "responsible",
                         "intention": "benign",
@@ -321,6 +322,40 @@ class TestAnalyticsColumns:
             )).one()
         assert tuple(reviewer) == ("mock", 0.4, "soundness", None)
         assert tuple(chair) == (None, "inclusive")
+
+    def test_prompt_version_label_recorded_fk_null_without_registry(self, repo, engine):
+        repo.save(make_record())
+        with engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT prompt_version, prompt_version_id"
+                " FROM run_agent_config WHERE agent_name = 'reviewer_1'"
+            )).one()
+        assert tuple(row) == ("v1", None)  # label saved; registry empty -> no FK
+
+    def test_prompt_version_fk_resolved_with_seeded_registry(self, repo, engine):
+        from agent.prompting.catalog import DEFAULT_PROMPT_SEEDS
+        from db.prompt_repository import PromptRepository
+
+        prompt_repo = PromptRepository(engine)
+        prompt_repo.seed_defaults(DEFAULT_PROMPT_SEEDS)
+        expected_id = prompt_repo.get_by_role_label("reviewer", "v1").id
+
+        repo.save(make_record())
+        with engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT prompt_version, prompt_version_id"
+                " FROM run_agent_config WHERE agent_name = 'reviewer_1'"
+            )).one()
+        assert tuple(row) == ("v1", expected_id)
+
+    def test_missing_prompt_version_stays_null(self, repo, engine):
+        repo.save(make_record())  # area_chair entry has no prompt_version key
+        with engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT prompt_version, prompt_version_id"
+                " FROM run_agent_config WHERE agent_name = 'area_chair'"
+            )).one()
+        assert tuple(row) == (None, None)
 
     def test_out_of_range_rating_stored_as_null(self, repo, engine):
         record = make_record()

@@ -140,6 +140,12 @@ class RunAgentConfigTable(SQLModel, table=True):
     agent_name: str
     model: str = Field(index=True)
     temperature: float
+    # Prompt-version audit: label copied from graph_config; FK resolved at
+    # save time via (role, label) — both NULL for pre-versioning runs.
+    prompt_version: str | None = None
+    prompt_version_id: int | None = Field(
+        default=None, sa_column=Column(ForeignKey("prompt_version.id"), nullable=True)
+    )
     persona_commitment: str | None = None
     persona_intention: str | None = None
     persona_knowledgeability: str | None = None

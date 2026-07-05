@@ -14,11 +14,11 @@ from pathlib import Path
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
-from models.agent import AgentName
+from models.agent import AgentName, agent_role
 from models.run_record import AgentRun, RunRecord, RunSummary
 
 from db.mappers import record_to_rows, row_to_agent_run, rows_to_record
-from db.tables import AgentRunTable, RunTable
+from db.tables import AgentRunTable, PromptVersionTable, RunTable
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,10 @@ class SqlResultRepository:
             # No ORM relationships between the tables: flush the parent first
             # so the children's FK sees it.
             session.flush()
+            for config_row in config_rows:
+                config_row.prompt_version_id = self._resolve_prompt_version_id(
+                    session, config_row.agent_name, config_row.prompt_version
+                )
             session.add_all(agent_rows)
             session.add_all(config_rows)
             session.commit()
@@ -87,6 +91,18 @@ class SqlResultRepository:
             )
             for row in rows
         ]
+
+    @staticmethod
+    def _resolve_prompt_version_id(session, agent_name: str, label: str | None) -> int | None:
+        """FK for the prompt-version audit; miss -> NULL, never an error."""
+        if not label:
+            return None
+        return session.exec(
+            select(PromptVersionTable.id).where(
+                PromptVersionTable.agent_role == agent_role(agent_name),
+                PromptVersionTable.version_label == label,
+            )
+        ).first()
 
     def get(self, run_id: str) -> RunRecord:
         """Load a full RunRecord by run_id. Raises ValueError if not found."""
