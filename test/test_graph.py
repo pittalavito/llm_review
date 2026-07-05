@@ -17,10 +17,7 @@ from agent.impl.author_agent import AuthorAgent
 from client.mock_chat import MockChatModel
 from graph.builder import GraphBuilder
 from graph.edges import ac_decision, should_loop
-from graph.nodes.area_chair import area_chair_node
-from graph.nodes.author import author_node
-from graph.nodes.meta import meta_node
-from graph.nodes.reviewer import reviewer_node
+from graph.nodes import area_chair_node, author_node, meta_node, reviewer_node
 from graph.state import ReviewState
 from langgraph.graph import StateGraph
 

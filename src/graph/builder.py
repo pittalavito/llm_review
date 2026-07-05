@@ -2,10 +2,7 @@ from langgraph.graph import END, START, StateGraph
 
 from agent.base import BaseAgent
 from graph import edges
-from graph.nodes.area_chair import area_chair_node
-from graph.nodes.author import author_node
-from graph.nodes.meta import meta_node
-from graph.nodes.reviewer import reviewer_node
+from graph.nodes import area_chair_node, author_node, meta_node, reviewer_node
 from graph.state import ReviewState
 from models.agent import AgentName
 

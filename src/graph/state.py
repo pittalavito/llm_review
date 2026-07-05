@@ -1,3 +1,4 @@
+import json
 import operator
 from typing import Annotated, TypedDict
 
@@ -35,3 +36,37 @@ class ReviewState(TypedDict):
 
     # Agent invocation history — accumulated across all rounds
     agent_runs: Annotated[list, operator.add]
+
+
+# ---------------------------------------------------------------------------
+# State accessors — pure functions reused by multiple roles
+# ---------------------------------------------------------------------------
+
+def last_reviews(state: ReviewState) -> list[dict]:
+    """Return the three most recent reviews as decoded dicts."""
+    return [json.loads(r) for r in state["reviews"][-3:]]
+
+
+def compact_reviews(reviews: list[dict]) -> str:
+    """Serialize reviews as a token-efficient block for downstream agents."""
+    blocks = []
+    for r in reviews:
+        p = r.get("payload", {})
+        blocks.append(
+            f"[{r.get('agent', 'reviewer')}] rating={p.get('rating')}/10 "
+            f"confidence={p.get('confidence')}/5\n"
+            f"summary: {p.get('summary', '')}\n"
+            f"novelty: {p.get('significance_and_novelty', '')}\n"
+            f"+: {', '.join(p.get('reasons_for_acceptance') or [])}\n"
+            f"-: {', '.join(p.get('reasons_for_rejection') or [])}"
+        )
+    return "\n\n".join(blocks)
+
+
+def targeted_rebuttal(author_response: dict, reviewer_name: str) -> str:
+    """Pick the rebuttal addressed to `reviewer_name`, falling back to the general one."""
+    rebuttals = author_response.get("reviewer_rebuttals", [])
+    return next(
+        (r["response"] for r in rebuttals if r["reviewer_name"] == reviewer_name),
+        author_response.get("rebuttal", ""),
+    )

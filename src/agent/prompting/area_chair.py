@@ -1,5 +1,4 @@
-from graph.nodes._factory import compact_reviews, last_reviews
-from graph.state import ReviewState
+from graph.state import ReviewState, compact_reviews, last_reviews
 from models.agent import AreaChairStyle
 
 _STYLE_MODIFIER = {

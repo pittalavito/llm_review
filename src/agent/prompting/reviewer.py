@@ -1,5 +1,4 @@
-from graph.nodes._factory import targeted_rebuttal
-from graph.state import ReviewState
+from graph.state import ReviewState, targeted_rebuttal
 from models.agent import (
     AgentName,
     ReviewerCommitment,

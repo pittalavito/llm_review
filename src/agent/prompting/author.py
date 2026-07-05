@@ -1,7 +1,6 @@
 import json
 
-from graph.nodes._factory import last_reviews
-from graph.state import ReviewState
+from graph.state import ReviewState, last_reviews
 
 _SYSTEM_PROMPT_V1 = (
     "You are the author of a scientific paper that has just received peer reviews. "
