@@ -60,7 +60,7 @@ _BASE_SYSTEM_PROMPT_V1 = (
     "Be concrete and specific. Max 400 words."
 )
 
-_BASE_SYSTEM_PROMT_V2 = (
+_BASE_SYSTEM_PROMPT_V2 = (
     "You are a peer reviewer for the International Conference on Learning Representations (ICLR). "
     "ICLR values rigorous theory, strong empirical evaluation, and advances in representation "
     "learning, deep learning, and reinforcement learning. "

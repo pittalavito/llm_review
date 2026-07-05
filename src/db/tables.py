@@ -10,12 +10,16 @@ These classes are deliberately separate from the Pydantic domain models in
 models/run_record.py: RunRecord/AgentRun stay API-frozen, mapping happens
 explicitly in db/mappers.py.
 """
+
 from sqlalchemy import JSON, CheckConstraint, Column, ForeignKey, Index, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 _AGENT_NAMES_SQL = (
     "('reviewer_1','reviewer_2','reviewer_3','meta_reviewer','area_chair','author_agent')"
 )
+
+# Prompt versions are per *role*: the three reviewers share one base template.
+_AGENT_ROLES_SQL = "('reviewer','meta_reviewer','area_chair','author_agent')"
 
 
 class RunTable(SQLModel, table=True):
@@ -92,6 +96,28 @@ class AgentRunTable(SQLModel, table=True):
     input_tokens: int | None = None
     output_tokens: int | None = None
     total_tokens: int | None = None
+
+
+class PromptVersionTable(SQLModel, table=True):
+    """Registry of base system-prompt templates. Versions are immutable:
+    a new text means a new row (new version_label); only description and
+    is_active may change afterwards — the run -> version audit trail relies
+    on it. Persona/style modifiers are code-side composition, not versions."""
+
+    __tablename__ = "prompt_version"
+    __table_args__ = (
+        CheckConstraint(f"agent_role IN {_AGENT_ROLES_SQL}", name="ck_prompt_version_role"),
+        UniqueConstraint("agent_role", "version_label", name="uq_prompt_role_label"),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    agent_role: str
+    version_label: str          # e.g. "v1", "v2"
+    template: str               # immutable once created
+    template_hash: str          # sha256 of template (audit / dedup checks)
+    description: str | None = None
+    created_at: str             # ISO 8601
+    is_active: bool = True      # inactive versions cannot be selected at compile
 
 
 class RunAgentConfigTable(SQLModel, table=True):
