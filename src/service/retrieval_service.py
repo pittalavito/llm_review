@@ -1,6 +1,7 @@
 import logging
 
-from retrieval.indexing import IndexBuilder, IndexRepository, PaperFileReader
+from retrieval.cache import build_index_repository
+from retrieval.indexing import IndexBuilder, PaperFileReader
 from retrieval.ranking import BM25Ranker, BM25Tokenizer, ContextBuilder
 from models.retrieval import FileSignature, Index, IndexInfo, RetrievalMetadata
 from config import PAPERS_DIR, RAG_INDEX_DIR, Config
@@ -23,7 +24,7 @@ class RetrievalService:
         
         self._ranker = BM25Ranker(tokenizer)
         self._file_adapter = PaperFileReader(papers_dir)
-        self._index_repository = IndexRepository(index_dir)
+        self._index_repository = build_index_repository(config, index_dir)
         self._index_builder = IndexBuilder(tokenizer, config)
         self._context_builder = ContextBuilder(max_context_chars=config.rag_max_context_chars)
 

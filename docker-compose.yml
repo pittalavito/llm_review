@@ -1,0 +1,23 @@
+# Infrastructure services for local development.
+# The app itself runs on the host (scripts/run-app.py, port 8081) and reaches
+# Redis on localhost:6380; set REDIS_URL=redis://localhost:6380/0 in .env.
+# (Host port 6380: 6379 is often taken by other local Docker projects.)
+services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: llm-review-redis
+    ports:
+      - "6380:6379"
+    # allkeys-lru: honest policy for a pure cache; AOF + volume keep the
+    # warm cache across container restarts.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis-data:
