@@ -90,6 +90,11 @@ class AgentService:
         return self.init_agent(name, model, temperature).run(message)
 
     @staticmethod
+    def build_prompt_preview(name: AgentName, message: str) -> dict:
+        """Build prompt preview for a given agent — no LLM instantiation needed."""
+        return AgentService.get_agent_class(name).build_preview(message)
+
+    @staticmethod
     def get_agent_class(name: AgentName) -> type[BaseAgent]:
         try:
             return _AGENT_CLASSES[name]

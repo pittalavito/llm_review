@@ -92,7 +92,7 @@ class TestTestLlmEndpoint:
         assert isinstance(r.json(), str)
 
     def test_test_llm_error_returns_500(self, client):
-        with patch("container.Container.test_llm", side_effect=RuntimeError("boom")):
+        with patch("service.agent_service.AgentService.invoke_client", side_effect=RuntimeError("boom")):
             r = client.post("/llm-review/test-llm", json={
                 "model": LlmModelName.MOCK,
                 "temperature": 0.0,
@@ -135,7 +135,7 @@ class TestAgentsEndpoint:
         assert r.status_code in {400, 422}
 
     def test_test_agent_error_returns_500(self, client):
-        with patch("container.Container.test_agent", side_effect=RuntimeError("boom")):
+        with patch("service.agent_service.AgentService.run_agent", side_effect=RuntimeError("boom")):
             r = client.post("/llm-review/agents", json={
                 "name": AgentName.REVIEWER_1,
                 "model": LlmModelName.MOCK,
@@ -159,7 +159,7 @@ class TestAgentsEndpoint:
         assert "full_prompt" in r.json()
 
     def test_prompt_preview_error_returns_500(self, client):
-        with patch("container.Container.build_agent_prompt", side_effect=RuntimeError("boom")):
+        with patch("service.agent_service.AgentService.build_prompt_preview", side_effect=RuntimeError("boom")):
             r = client.post("/llm-review/agents/prompt-preview", json={
                 "name": AgentName.REVIEWER_1,
                 "message": "test",
@@ -219,7 +219,7 @@ class TestPapersEndpoint:
         assert r.status_code == 400
 
     def test_index_paper_error_returns_500(self, client):
-        with patch("container.Container.index_paper", side_effect=RuntimeError("boom")):
+        with patch("service.retrieval_service.RetrievalService.index_paper", side_effect=RuntimeError("boom")):
             r = client.post("/llm-review/papers/index", json={"paper_path": PAPER_PATH})
         assert r.status_code == 500
 
@@ -234,7 +234,7 @@ class TestPapersEndpoint:
         assert r.status_code == 404
 
     def test_get_indexed_detail_error_returns_500(self, client):
-        with patch("container.Container.get_indexed_paper", side_effect=RuntimeError("boom")):
+        with patch("service.retrieval_service.RetrievalService.get_indexed_paper", side_effect=RuntimeError("boom")):
             r = client.get("/llm-review/papers/indexed/detail", params={"paper_path": PAPER_PATH})
         assert r.status_code == 500
 
@@ -320,7 +320,7 @@ class TestRunsEndpoints:
         assert client.get("/llm-review/runs/nonexistent-run-id").status_code == 404
 
     def test_get_run_error_returns_500(self, client):
-        with patch("container.Container.get_run", side_effect=RuntimeError("boom")):
+        with patch("service.graph_service.GraphService.get_run", side_effect=RuntimeError("boom")):
             r = client.get("/llm-review/runs/some-run-id")
         assert r.status_code == 500
 
@@ -355,6 +355,6 @@ class TestRunsEndpoints:
             assert item["round"] == 0
 
     def test_get_run_agent_runs_error_returns_500(self, client):
-        with patch("container.Container.get_agent_runs", side_effect=RuntimeError("boom")):
+        with patch("service.graph_service.GraphService.get_agent_runs", side_effect=RuntimeError("boom")):
             r = client.get("/llm-review/runs/some-run-id/agent-runs")
         assert r.status_code == 500

@@ -70,25 +70,28 @@ class TestConfig:
 
 class TestContainer:
 
-    def test_health_check_returns_ok(self, container):
-        assert container.health_check()["status"] == "ok"
+    def test_services_are_wired(self, container):
+        assert container.agent_service is not None
+        assert container.retrieval_service is not None
+        assert container.graph_service is not None
+        assert container.comparator is not None
 
-    def test_health_check_returns_version(self, container):
-        assert "version" in container.health_check()
+    def test_config_exposes_version(self, container):
+        assert container.config.app_version
 
     def test_list_papers_returns_list(self, container):
-        assert isinstance(container.list_papers_path(), list)
+        assert isinstance(container.retrieval_service.list_papers(), list)
 
     def test_list_indexed_papers_returns_list(self, container):
-        assert isinstance(container.list_indexed_papers(), list)
+        assert isinstance(container.retrieval_service.list_indexed_papers(), list)
 
-    def test_build_agent_prompt_returns_dict(self, container):
-        result = container.build_agent_prompt(AgentName.REVIEWER_1, "test message")
+    def test_build_prompt_preview_returns_dict(self, container):
+        result = container.agent_service.build_prompt_preview(AgentName.REVIEWER_1, "test message")
         assert "system_prompt" in result
         assert "full_prompt" in result
 
-    def test_test_agent_with_mock_returns_response(self, container):
-        assert container.test_agent(
+    def test_run_agent_with_mock_returns_response(self, container):
+        assert container.agent_service.run_agent(
             AgentName.REVIEWER_1, LlmModelName.MOCK, 0.0, "review this paper"
         ) is not None
 

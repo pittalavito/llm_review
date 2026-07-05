@@ -24,7 +24,7 @@ def _http_error(exc: Exception, action: str, status: int = 500) -> HTTPException
 
 @router.get("/health", response_model=dict)
 async def health_check(container: Container = Depends(inject_container)) -> dict:
-    return container.health_check()
+    return {"status": "ok", "version": container.config.app_version}
 
 
 @router.get("/models")
@@ -35,7 +35,7 @@ def list_models() -> list[LlmModelName]:
 @router.post("/test-llm", response_model=str)
 def test_llm(body: TestLlmRequest, container: Container = Depends(inject_container)) -> str:
     try:
-        return container.test_llm(body.model, body.temperature, body.message)
+        return container.agent_service.invoke_client(body.model, body.temperature, body.message)
     except Exception as exc:
         raise _http_error(exc, f"LLM call (model={body.model})") from exc
 
@@ -47,13 +47,13 @@ def list_agents() -> list[AgentName]:
 
 @router.get("/papers")
 def list_papers(container: Container = Depends(inject_container)) -> list[str]:
-    return container.list_papers_path()
+    return container.retrieval_service.list_papers()
 
 
 @router.post("/papers/index")
 def index_paper(body: IndexPaperRequest, container: Container = Depends(inject_container)) -> dict:
     try:
-        return container.index_paper(body.paper_path, body.force_reindex)
+        return container.retrieval_service.index_paper(body.paper_path, body.force_reindex).model_dump()
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -62,13 +62,13 @@ def index_paper(body: IndexPaperRequest, container: Container = Depends(inject_c
 
 @router.get("/papers/indexed")
 def list_indexed_papers(container: Container = Depends(inject_container)) -> list[str]:
-    return container.list_indexed_papers()
+    return container.retrieval_service.list_indexed_papers()
 
 
 @router.get("/papers/indexed/detail")
 def get_indexed_paper(paper_path: str, container: Container = Depends(inject_container)) -> dict:
     try:
-        return container.get_indexed_paper(paper_path)
+        return container.retrieval_service.get_indexed_paper(paper_path).model_dump()
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
@@ -78,7 +78,7 @@ def get_indexed_paper(paper_path: str, container: Container = Depends(inject_con
 @router.post("/agents")
 def test_agent(body: TestAgentRequest, container: Container = Depends(inject_container)):
     try:
-        return container.test_agent(body.name, body.model, body.temperature, body.message)
+        return container.agent_service.run_agent(body.name, body.model, body.temperature, body.message)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=f"Agent error: {exc}") from exc
     except Exception as exc:
@@ -88,7 +88,7 @@ def test_agent(body: TestAgentRequest, container: Container = Depends(inject_con
 @router.post("/agents/prompt-preview")
 def agent_prompt_preview(body: PreviewPromptRequest, container: Container = Depends(inject_container)) -> dict:
     try:
-        return container.build_agent_prompt(body.name, body.message)
+        return container.agent_service.build_prompt_preview(body.name, body.message)
     except Exception as exc:
         raise _http_error(exc, f"Prompt preview '{body.name}'") from exc
 
@@ -116,7 +116,7 @@ def compile_graph(body: GraphAgentConfig | None = None, container: Container = D
 
 @router.get("/graph/config")
 def get_graph_config(container: Container = Depends(inject_container)) -> dict | None:
-    return container.get_graph_config()
+    return container.graph_service.get_graph_config()
 
 
 @router.post("/graph/run")
@@ -147,13 +147,13 @@ def run_graph(body: GraphRunRequest, container: Container = Depends(inject_conta
 
 @router.get("/runs")
 def list_runs(container: Container = Depends(inject_container)) -> list:
-    return container.list_runs()
+    return container.graph_service.list_runs()
 
 
 @router.get("/runs/{run_id}")
 def get_run(run_id: str, container: Container = Depends(inject_container)) -> dict:
     try:
-        return container.get_run(run_id)
+        return container.graph_service.get_run(run_id).model_dump()
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
@@ -162,13 +162,13 @@ def get_run(run_id: str, container: Container = Depends(inject_container)) -> di
 
 @router.get("/compare/papers")
 def list_comparable_papers(container: Container = Depends(inject_container)) -> list[dict]:
-    return container.list_comparable_papers()
+    return container.comparator.list_papers()
 
 
 @router.get("/compare")
 def compare_paper(paper_path: str, container: Container = Depends(inject_container)) -> dict:
     try:
-        return container.compare_paper(paper_path)
+        return container.comparator.compare_paper(paper_path).model_dump()
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
@@ -183,7 +183,7 @@ def get_run_agent_runs(
     container: Container = Depends(inject_container),
 ) -> list[dict]:
     try:
-        return container.get_agent_runs(run_id, agent_name=agent_name, round_index=round_index)
+        return container.graph_service.get_agent_runs(run_id, agent_name=agent_name, round_index=round_index)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
