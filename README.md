@@ -48,6 +48,13 @@ All endpoints under `/llm-review`.
 | GET | `/runs/{run_id}` | Single run detail |
 | GET | `/runs/{run_id}/agent-runs` | Agent traces (filter by name/round) |
 
+### Comparison
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/compare/papers` | List papers available for comparison |
+| GET | `/compare` | Compare pipeline results against reference reviews for a paper |
+
 ### Other (dev/test)
 
 | Method | Endpoint | Description |
@@ -57,10 +64,12 @@ All endpoints under `/llm-review`.
 | POST | `/test-llm` | Direct LLM test |
 | GET | `/agents` | List agent names |
 | POST | `/agents` | Test a single agent |
+| POST | `/agents/prompt-preview` | Preview the built prompt for an agent |
 | POST | `/agents/retrieval` | Test agent with RAG |
 | GET | `/papers` | List available papers |
 | POST | `/papers/index` | Index a paper |
 | GET | `/papers/indexed` | List indexed papers |
+| GET | `/papers/indexed/detail` | Index detail for a single paper |
 
 ## Scripts
 
@@ -73,3 +82,15 @@ All cross-platform Python. Run with `uv run python scripts/<name>.py`.
 | run-test | `uv run python scripts/run-test.py` | Run pytest with coverage |
 | stop-app | `uv run python scripts/stop-app.py` | Kill the uvicorn process |
 | clean-cache | `uv run python scripts/clean-cache.py` | Remove Python cache artifacts |
+
+## Todo / Future work
+
+1. **No DB/FTP integration** — all processed files (RAG index, papers, runs...) live under `resource/`.
+2. **No file upload from the UI** — a paper must be manually placed in `resource/papers/` and then indexed by hand.
+3. **Naive RAG** — the retrieval is basic and could be improved.
+4. **UI improvements** — the UI could be rebuilt with Streamlit.
+5. **Prompt versioning** — agent prompts could be versioned and persisted to a DB.
+6. **Containerization** — the app could be packaged with Docker.
+7. **Custom mock runs** — allow building custom runs reusing real past responses as mocks, but only after storing them in a DB (e.g. Redis).
+8. **Compare export** — add a UI function to export the comparison as CSV for use in the thesis.
+9. **Dynamic review scope** — let agents set the review scope dynamically (e.g. ICLR, LMN, Other).
