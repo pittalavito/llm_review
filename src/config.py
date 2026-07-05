@@ -30,7 +30,6 @@ class Config(BaseSettings):
     app_name: str = "llm-review"
     app_version: str = "0.1.0"
     app_log_level: str = "INFO"
-    llm_debug_json_logs: bool = False
 
     # --- Ollama ---
     ollama_url: str | None = None
