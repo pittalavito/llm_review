@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 
-from graph.result_repository import ResultRepository
+from db.sql_result_repository import SqlResultRepository
 from models.agent import AgentName
 from comparison.models import (
     LLMAreaChair,
@@ -23,8 +23,8 @@ _REJECT_KW = {"reject"}
 
 class ReviewComparator:
 
-    def __init__(self, results_dir: Path, index_path: Path, cache_dir: Path | None = None):
-        self._repo = ResultRepository(results_dir)
+    def __init__(self, result_repository: SqlResultRepository, index_path: Path, cache_dir: Path | None = None):
+        self._repo = result_repository
         self._index: list[dict] = json.loads(index_path.read_text(encoding="utf-8"))
         self._client = OpenReviewClient(cache_dir=cache_dir)
         self._parser = HumanReviewParser()

@@ -2,7 +2,8 @@ import logging
 
 from datetime import datetime, timezone
 from threading import RLock
-from config import Config, RESULTS_DIR
+from config import Config
+from db.sql_result_repository import SqlResultRepository
 from models.agent import AgentName
 from models.run_record import AgentRun, RunRecord
 from agent.base import BaseAgent
@@ -10,7 +11,6 @@ from graph.builder import GraphBuilder
 from graph.config import GraphAgentConfig
 from graph.state import ReviewState
 from service.retrieval_service import RetrievalService
-from graph.result_repository import ResultRepository
 
 
 logger = logging.getLogger(__name__)
@@ -20,13 +20,14 @@ _LOGGER_PREFIX = "[GraphService]"
 
 class GraphService:
 
-    def __init__(self, config: Config, retrieval_service: RetrievalService):
+    def __init__(self, config: Config, retrieval_service: RetrievalService,
+                 result_repository: SqlResultRepository):
         self._config = config
         self._retrieval_service = retrieval_service
         self._graph_config: GraphAgentConfig | None = None
         self._graph = None
         self._lock = RLock()
-        self._result_repository = ResultRepository(RESULTS_DIR.resolve())
+        self._result_repository = result_repository
 
     def compile(self, agents: dict[AgentName, BaseAgent], graph_config: GraphAgentConfig) -> None:
         with self._lock:
@@ -62,14 +63,7 @@ class GraphService:
         return self._result_repository.get(run_id)
 
     def get_agent_runs(self, run_id: str, agent_name: AgentName | None = None, round_index: int | None = None) -> list[dict]:
-        record = self._result_repository.get(run_id)
-        runs = record.agent_runs
-
-        if agent_name is not None:
-            runs = [r for r in runs if r.agent == agent_name]
-        if round_index is not None:
-            runs = [r for r in runs if r.round == round_index]
-
+        runs = self._result_repository.get_agent_runs(run_id, agent_name=agent_name, round_index=round_index)
         return [r.model_dump() for r in runs]
 
     def _build_initial_state(self, paper_path: str, retrieval_metadata: dict) -> ReviewState:
@@ -89,7 +83,7 @@ class GraphService:
 
     def _save_run(self, result: dict, paper_path: str, run_description: str, retrieval_metadata: dict) -> None:
         try:
-            run_id = ResultRepository.build_run_id(paper_path)
+            run_id = self._result_repository.build_run_id(paper_path)
             agent_runs = [AgentRun.model_validate(r) for r in result.get("agent_runs", [])]
             record = RunRecord(
                 run_id=run_id,

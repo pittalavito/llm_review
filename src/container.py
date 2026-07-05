@@ -1,5 +1,7 @@
 from fastapi import Request
 from config import Config, RESOURCE_DIR
+from db.engine import create_db_engine, init_db
+from db.sql_result_repository import SqlResultRepository
 from graph.config import GraphAgentConfig
 from service.graph_service import GraphService
 from service.agent_service import AgentService
@@ -15,11 +17,14 @@ class Container:
 
     def __init__(self, config: Config):
         self.config = config
+        self.engine = create_db_engine(config)
+        init_db(self.engine)
+        self.result_repository = SqlResultRepository(self.engine)
         self.agent_service = AgentService(config)
         self.retrieval_service = RetrievalService(config)
-        self.graph_service = GraphService(config, self.retrieval_service)
+        self.graph_service = GraphService(config, self.retrieval_service, self.result_repository)
         self.comparator = ReviewComparator(
-            results_dir=RESOURCE_DIR / "results",
+            result_repository=self.result_repository,
             index_path=_INDEX_PATH,
             cache_dir=RESOURCE_DIR / "openreview",
         )
