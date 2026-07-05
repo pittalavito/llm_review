@@ -15,8 +15,8 @@ _SYSTEM_PROMPT_V1 = (
 )
 
 
-def build_system_prompt() -> str:
-    return _SYSTEM_PROMPT_V1
+def build_system_prompt(base_template: str | None = None) -> str:
+    return base_template or _SYSTEM_PROMPT_V1
 
 
 def build_message(state: ReviewState) -> str:

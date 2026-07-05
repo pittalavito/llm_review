@@ -12,7 +12,14 @@ from agent.impl.reviewer_agent import ReviewerAgent
 from client.factory import CLIENT_FACTORIES
 from config import Config
 from graph.config import GraphAgentConfig
-from models.agent import AgentName, AgentResponse, AreaChairStyle, LlmModelName, ReviewerPersona
+from models.agent import (
+    AgentName,
+    AgentResponse,
+    AreaChairStyle,
+    LlmModelName,
+    ReviewerPersona,
+    agent_role,
+)
 from service.retrieval_context_provider import RetrievalContextProvider
 
 
@@ -58,8 +65,12 @@ class AgentService:
         top_k: int | None = None,
         reviewer_persona: ReviewerPersona | None = None,
         area_chair_style: AreaChairStyle | None = None,
+        prompt_template: str | None = None,
+        prompt_version: str | None = None,
     ) -> BaseAgent:
-        key = self._agent_cache_key(name, model, temperature, reviewer_persona, area_chair_style)
+        key = self._agent_cache_key(
+            name, model, temperature, reviewer_persona, area_chair_style, prompt_version
+        )
         if key in self._agent_cache:
             logger.info(f"{_LOGGER_PREFIX} Agent cache hit name={name} model={model}")
             return self._agent_cache[key]
@@ -68,20 +79,36 @@ class AgentService:
             if key in self._agent_cache:
                 return self._agent_cache[key]
             client = self.init_client(model, temperature)
-            agent = self._build_agent(name, client, reviewer_persona, area_chair_style)
+            agent = self._build_agent(name, client, reviewer_persona, area_chair_style, prompt_template)
             agent._context_provider = self._build_context_provider(type(agent), retrieval_service, agent)
             self._agent_cache[key] = agent
             return agent
 
-    def init_agents_from_graph_config(self, agents_config: GraphAgentConfig, retrieval_service=None) -> dict[AgentName, BaseAgent]:
+    def init_agents_from_graph_config(
+        self,
+        agents_config: GraphAgentConfig,
+        retrieval_service=None,
+        prompt_repository=None,
+    ) -> dict[AgentName, BaseAgent]:
         return {
             a.agent_name: self.init_agent(
                 a.agent_name, a.model, a.temperature, retrieval_service,
                 reviewer_persona=a.reviewer_persona,
                 area_chair_style=a.area_chair_style,
+                prompt_template=self._resolve_prompt_template(prompt_repository, a),
+                prompt_version=a.prompt_version,
             )
             for a in agents_config.agents
         }
+
+    @staticmethod
+    def _resolve_prompt_template(prompt_repository, agent_config) -> str | None:
+        """Base template from the DB registry; None (code default) when no
+        repository is wired. Unknown/inactive label -> ValueError."""
+        if prompt_repository is None:
+            return None
+        role = agent_role(agent_config.agent_name)
+        return prompt_repository.get_by_role_label(role, agent_config.prompt_version).template
 
     def invoke_client(self, model: LlmModelName, temperature: float, message: str) -> str:
         return self.init_client(model, temperature).invoke(message).content
@@ -104,20 +131,27 @@ class AgentService:
     def _normalize_temperature(self, temperature: float) -> float:
         return round(float(temperature), 3)
 
-    def _agent_cache_key(self, name, model, temperature, persona, style) -> tuple:
+    def _agent_cache_key(self, name, model, temperature, persona, style, prompt_version=None) -> tuple:
         persona_key = (
             (persona.commitment, persona.intention, persona.knowledgeability, persona.focus)
             if persona else None
         )
-        return (name, model, self._normalize_temperature(temperature), persona_key, style)
+        return (name, model, self._normalize_temperature(temperature), persona_key, style, prompt_version)
 
-    def _build_agent(self, name: AgentName, client: BaseChatModel, persona: ReviewerPersona | None, style: AreaChairStyle | None) -> BaseAgent:
+    def _build_agent(
+        self,
+        name: AgentName,
+        client: BaseChatModel,
+        persona: ReviewerPersona | None,
+        style: AreaChairStyle | None,
+        prompt_template: str | None = None,
+    ) -> BaseAgent:
         agent_class = self.get_agent_class(name)
         if name in _REVIEWER_NAMES:
-            return agent_class(client=client, agent_name=name, persona=persona)
+            return agent_class(client=client, agent_name=name, persona=persona, base_template=prompt_template)
         if name == AgentName.AREA_CHAIR and style is not None:
-            return agent_class(client=client, style=style)
-        return agent_class(client=client)
+            return agent_class(client=client, style=style, base_template=prompt_template)
+        return agent_class(client=client, base_template=prompt_template)
 
     def _create_client(self, model: LlmModelName, temperature: float) -> BaseChatModel:
         for predicate, factory in CLIENT_FACTORIES:

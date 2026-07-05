@@ -13,6 +13,7 @@ T = TypeVar("T", bound=BaseModel)
 
 class LlmModelName(StrEnum):
     MOCK = "mock"
+    
     # Ollama (local)
     OLLAMA_TINYLLAMA = "tinyllama:1.1b"
     OLLAMA_LLAMA32 = "llama3.2:3b"
@@ -20,11 +21,14 @@ class LlmModelName(StrEnum):
     OLLAMA_GEMMA_4 = "gemma4"
     OLLAMA_GEMMA_3_4B = "gemma3:4b"
     OLLAMA_MISTRAL_7B = "mistral:7b"
+    
     # Aitho (cloud)
     AITHO_QWEN_3_6 = "qwen3.6:27b"
+    
     # OpenAI
     OPENAI_GPT4O = "gpt-4o"
     OPENAI_GPT4O_MINI = "gpt-4o-mini"
+    
     # Anthropic
     ANTHROPIC_CLAUDE_SONNET = "claude-sonnet-4-6"
     ANTHROPIC_CLAUDE_HAIKU = "claude-haiku-4-5-20251001"
@@ -36,16 +40,23 @@ class LlmModelName(StrEnum):
         return self in {
             self.OLLAMA_TINYLLAMA, 
             self.OLLAMA_LLAMA32,
-            self.OLLAMA_GROQ_TOOL_USE, self.OLLAMA_GEMMA_4, 
+            self.OLLAMA_GROQ_TOOL_USE, 
+            self.OLLAMA_GEMMA_4, 
             self.OLLAMA_GEMMA_3_4B,
             self.OLLAMA_MISTRAL_7B
         }
 
     def is_openai(self) -> bool:
-        return self in {self.OPENAI_GPT4O, self.OPENAI_GPT4O_MINI}
+        return self in {
+            self.OPENAI_GPT4O, 
+            self.OPENAI_GPT4O_MINI
+        }
 
     def is_anthropic(self) -> bool:
-        return self in {self.ANTHROPIC_CLAUDE_SONNET, self.ANTHROPIC_CLAUDE_HAIKU}
+        return self in {
+            self.ANTHROPIC_CLAUDE_SONNET, 
+            self.ANTHROPIC_CLAUDE_HAIKU
+        }
     
     def is_aitho(self) -> bool:
         return self == self.AITHO_QWEN_3_6
@@ -64,12 +75,20 @@ class AgentName(StrEnum):
     AUTHOR_AGENT = "author_agent"
 
 
+def agent_role(name: AgentName | str) -> str:
+    """Prompt-versioning role: the three reviewers share one base template."""
+    if str(name).startswith("reviewer_"):
+        return "reviewer"
+    return str(name)
+
+
 ##########################################################
 ### AGENT STRUCTURED OUTPUT MODEL ########################
 ##########################################################
 
 class RawResponse(BaseModel):
     """Fallback payload for agents without a structured output schema."""
+    
     response: str
 
 
@@ -97,6 +116,7 @@ class ReviewerFocus(StrEnum):
     Each reviewer covers a different dimension of the paper so that
     the three reviews are complementary rather than redundant.
     """
+    
     SOUNDNESS = "soundness"   # theoretical correctness, proofs, assumptions
     EMPIRICAL = "empirical"  # experiments, baselines, reproducibility
     NOVELTY = "novelty"    # originality, related work, impact
@@ -131,6 +151,7 @@ class ReviewerPersona(BaseModel):
 
 class ReviewerResponse(BaseModel):
     """Unified review aligned with AgentReview format: covers soundness, novelty, presentation, and impact."""
+    
     summary: str = Field(min_length=1, max_length=600)
     significance_and_novelty: str = Field(min_length=1, max_length=300)
     reasons_for_acceptance: list[str] = Field(min_length=1, max_length=4)
@@ -152,6 +173,7 @@ class ReviewDecision(StrEnum):
 
 class MetaReviewResponse(BaseModel):
     """Aggregates the three reviews into a summary and recommendation for the Area Chair."""
+    
     summary: str = Field(min_length=1, max_length=600)
     key_points: list[str] = Field(min_length=1, max_length=5)
     overall_score: int = Field(ge=1, le=10)
@@ -169,6 +191,7 @@ class AreaChairStyle(StrEnum):
 
 class AreaChairResponse(BaseModel):
     """Final binding decision produced by the Area Chair after reading reviews and meta-review."""
+    
     summary: str = Field(min_length=1, max_length=400)
     justification: str = Field(min_length=1, max_length=400)
     decision: ReviewDecision
@@ -181,16 +204,19 @@ class AreaChairResponse(BaseModel):
 
 class RevisedSection(BaseModel):
     """A single revised paper section produced by the author."""
+    
     section_name: str
     content: str
 
 class ReviewerRebuttal(BaseModel):
     """Targeted rebuttal addressed to a specific reviewer."""
+    
     reviewer_name: str  # e.g. "reviewer_1"
     response: str = Field(min_length=1, max_length=1_000)
 
 class AuthorResponse(BaseModel):
     """Author's rebuttal, per-reviewer targeted responses, and revised paper sections."""
+    
     rebuttal: str = Field(min_length=1, max_length=600)
     reviewer_rebuttals: list[ReviewerRebuttal] = Field(default_factory=list)
     revised_sections: list[RevisedSection] = Field(default_factory=list, max_length=3)

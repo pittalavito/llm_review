@@ -1,6 +1,8 @@
 from fastapi import Request
 from config import Config, RESOURCE_DIR
+from agent.prompting.catalog import DEFAULT_PROMPT_SEEDS
 from db.engine import create_db_engine, init_db
+from db.prompt_repository import PromptRepository
 from db.sql_result_repository import SqlResultRepository
 from graph.config import GraphAgentConfig
 from service.graph_service import GraphService
@@ -20,6 +22,8 @@ class Container:
         self.engine = create_db_engine(config)
         init_db(self.engine)
         self.result_repository = SqlResultRepository(self.engine)
+        self.prompt_repository = PromptRepository(self.engine)
+        self.prompt_repository.seed_defaults(DEFAULT_PROMPT_SEEDS)
         self.agent_service = AgentService(config)
         self.retrieval_service = RetrievalService(config)
         self.graph_service = GraphService(config, self.retrieval_service, self.result_repository)
@@ -36,7 +40,9 @@ class Container:
 
     def compile_graph(self, graph_config: GraphAgentConfig | None = None) -> None:
         graph_config = graph_config or GraphAgentConfig.default_config()
-        agents = self.agent_service.init_agents_from_graph_config(graph_config, self.retrieval_service)
+        agents = self.agent_service.init_agents_from_graph_config(
+            graph_config, self.retrieval_service, self.prompt_repository
+        )
         self.graph_service.compile(agents, graph_config)
 
     def invoke_graph(

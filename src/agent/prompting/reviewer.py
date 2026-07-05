@@ -75,9 +75,10 @@ _BASE_SYSTEM_PROMPT_V2 = (
 )
 
 
-def build_system_prompt(persona: ReviewerPersona) -> str:
+def build_system_prompt(persona: ReviewerPersona, base_template: str | None = None) -> str:
+    """Compose base template (DB-selected; code V1 as fallback) + persona modifiers."""
     return (
-        f"{_BASE_SYSTEM_PROMPT_V1} "
+        f"{base_template or _BASE_SYSTEM_PROMPT_V1} "
         f"{_FOCUS_PROFILES[persona.focus].modifier} "
         f"{_COMMITMENT_MODIFIER[persona.commitment]} "
         f"{_INTENTION_MODIFIER[persona.intention]} "

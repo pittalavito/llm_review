@@ -27,8 +27,8 @@ _BASE_SYSTEM_PROMPT_V1 = (
 )
 
 
-def build_system_prompt(style: AreaChairStyle) -> str:
-    return f"{_BASE_SYSTEM_PROMPT_V1} {_STYLE_MODIFIER[style]}"
+def build_system_prompt(style: AreaChairStyle, base_template: str | None = None) -> str:
+    return f"{base_template or _BASE_SYSTEM_PROMPT_V1} {_STYLE_MODIFIER[style]}"
 
 
 def build_message(state: ReviewState) -> str:

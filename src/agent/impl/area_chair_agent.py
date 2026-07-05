@@ -10,6 +10,7 @@ class AreaChairAgent(BaseAgent[AreaChairResponse]):
     RESPONSE_SCHEMA = AreaChairResponse
     RAG_QUERY = ""
 
-    def __init__(self, client, context_provider=None, style: AreaChairStyle = _DEFAULT_STYLE):
-        self.SYSTEM_PROMPT = build_system_prompt(style)
+    def __init__(self, client, context_provider=None, style: AreaChairStyle = _DEFAULT_STYLE,
+                 base_template: str | None = None):
+        self.SYSTEM_PROMPT = build_system_prompt(style, base_template)
         super().__init__(client, context_provider)

@@ -23,9 +23,10 @@ class ReviewerAgent(BaseAgent[ReviewerResponse]):
         context_provider=None,
         persona: ReviewerPersona | None = None,
         agent_name: AgentName = AgentName.REVIEWER_1,
+        base_template: str | None = None,
     ):
         self.AGENT_NAME = agent_name
         p = persona or _DEFAULT_PERSONA
-        self.SYSTEM_PROMPT = build_system_prompt(p)
+        self.SYSTEM_PROMPT = build_system_prompt(p, base_template)
         self.rag_focus_terms, self.rag_focus_sections = get_rag_focus(p)
         super().__init__(client, context_provider)

@@ -70,3 +70,27 @@ class TestPromptBuilders:
         )
         prompt = build_reviewer_system_prompt(persona)
         assert "novelty and impact" in prompt.lower()
+
+
+class TestBaseTemplateOverride:
+    """The DB-selected base template replaces the code default; persona and
+    style modifiers keep being composed on top."""
+
+    def test_reviewer_uses_custom_base_and_keeps_modifiers(self):
+        persona = ReviewerPersona(focus=ReviewerFocus.EMPIRICAL)
+        prompt = build_reviewer_system_prompt(persona, base_template="CUSTOM BASE")
+        assert prompt.startswith("CUSTOM BASE ")
+        assert "empirical validation" in prompt.lower()
+
+    def test_reviewer_none_falls_back_to_v1(self):
+        persona = ReviewerPersona()
+        assert build_reviewer_system_prompt(persona, None) == build_reviewer_system_prompt(persona)
+
+    def test_area_chair_uses_custom_base_and_keeps_style(self):
+        prompt = build_area_chair_system_prompt(AreaChairStyle.CONFORMIST, base_template="CUSTOM AC")
+        assert prompt.startswith("CUSTOM AC ")
+        assert "consensus" in prompt.lower() or "defer" in prompt.lower()
+
+    def test_meta_reviewer_and_author_return_custom_base_verbatim(self):
+        assert build_meta_reviewer_system_prompt("CUSTOM META") == "CUSTOM META"
+        assert build_author_system_prompt("CUSTOM AUTHOR") == "CUSTOM AUTHOR"

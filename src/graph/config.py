@@ -13,6 +13,9 @@ class AgentLLMConfig(BaseModel):
     agent_name: AgentName
     model: LlmModelName
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    # Base system-prompt version label, resolved from the prompt_version
+    # table at compile time (the three reviewers share the 'reviewer' role).
+    prompt_version: str = Field(default="v1", min_length=1)
     # Only used when agent_name in {REVIEWER_1, REVIEWER_2, REVIEWER_3}
     reviewer_persona: ReviewerPersona | None = None
     # Only used when agent_name == AREA_CHAIR
@@ -25,7 +28,7 @@ class GraphAgentConfig(BaseModel):
 
     @staticmethod
     def default_config() -> "GraphAgentConfig":
-        _DEFAULT_MODEL = LlmModelName.OPENAI_GPT4O_MINI
+        _DEFAULT_MODEL = LlmModelName.MOCK
         _DEFAULT_TEMPERATURE = 0.4
         # Each reviewer covers a distinct evaluation angle so the three reviews are complementary.
         agents = [
