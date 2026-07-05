@@ -1,11 +1,7 @@
 import logging
 
-from retrieval.file_reader import PaperFileReader
-from retrieval.tokenizer import BM25Tokenizer
-from retrieval.index_repository import IndexRepository
-from retrieval.context_builder import ContextBuilder
-from retrieval.index_builder import IndexBuilder
-from retrieval.ranker import BM25Ranker
+from retrieval.indexing import IndexBuilder, IndexRepository, PaperFileReader
+from retrieval.ranking import BM25Ranker, BM25Tokenizer, ContextBuilder
 from models.retrieval import FileSignature, Index, IndexInfo, RetrievalMetadata
 from config import PAPERS_DIR, RAG_INDEX_DIR, Config
 

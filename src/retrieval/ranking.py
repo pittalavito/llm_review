@@ -1,8 +1,16 @@
 import math
+import re
 from collections import Counter
 
 from models.retrieval import Index, IndexedChunk, RetrievedChunk
-from retrieval.tokenizer import BM25Tokenizer
+
+TOKEN_PATTERN = re.compile(r"[a-zA-Z0-9_]+")
+
+
+class BM25Tokenizer:
+    @staticmethod
+    def tokenize(text: str) -> list[str]:
+        return [token.lower() for token in TOKEN_PATTERN.findall(text)]
 
 
 class BM25Ranker:
@@ -86,3 +94,27 @@ class BM25Ranker:
             )
             for rank, (score, original_index, chunk) in enumerate(scores[:top_k])
         ]
+
+
+class ContextBuilder:
+    def __init__(self, max_context_chars: int):
+        self.max_context_chars = max_context_chars
+
+    def build_context(self, relative_path: str, chunks: list[RetrievedChunk]) -> str:
+        if not chunks:
+            return f"Paper source: {relative_path}\nNo relevant chunks were retrieved."
+
+        parts = [
+            f"Paper source: {relative_path}",
+            "Retrieved chunks:",
+        ]
+
+        total_chars = 0
+        for chunk in chunks:
+            block = f"\n[Chunk #{chunk.rank} | score={chunk.score}]\n{chunk.text}"
+            if total_chars + len(block) > self.max_context_chars:
+                break
+            parts.append(block)
+            total_chars += len(block)
+
+        return "\n".join(parts).strip()

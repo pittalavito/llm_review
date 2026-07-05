@@ -9,10 +9,8 @@ import sys
 import pytest
 
 from collections import Counter
-from retrieval.index_builder import IndexBuilder, _normalize_header, _HEADER_LINE_RE
-from retrieval.ranker import BM25Ranker
-from retrieval.context_builder import ContextBuilder
-from retrieval.tokenizer import BM25Tokenizer
+from retrieval.indexing import IndexBuilder, _normalize_header, _HEADER_LINE_RE
+from retrieval.ranking import BM25Ranker, BM25Tokenizer, ContextBuilder
 from models.retrieval import FileSignature, IndexedChunk, Index, IndexConfig, RetrievedChunk
 
 sys.path.insert(0, "src")
