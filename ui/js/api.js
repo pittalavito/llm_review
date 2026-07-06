@@ -239,6 +239,63 @@ export async function getRunAgentRuns(runId, filters = {}) {
  * @returns {Promise<{ agent: string, payload: Record<string, unknown> }>}
  */
 /**
+ * GET /llm-review/prompts
+ * @param {{ agent_role?: string, include_inactive?: boolean }} [filters]
+ * @returns {Promise<Array<{ id: number, agent_role: string, version_label: string, template_hash: string, description?: string, created_at: string, is_active: boolean }>>}
+ */
+export async function listPromptVersions(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.agent_role) params.set('agent_role', filters.agent_role);
+  if (filters.include_inactive) params.set('include_inactive', 'true');
+  const qs = params.toString();
+  const res = await fetch(`${BASE_URL}/prompts${qs ? `?${qs}` : ''}`);
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * GET /llm-review/prompts/{id} — includes the template text.
+ * @param {number} versionId
+ * @returns {Promise<Record<string, unknown>>}
+ */
+export async function getPromptVersion(versionId) {
+  const res = await fetch(`${BASE_URL}/prompts/${versionId}`);
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * POST /llm-review/prompts — register a new immutable version.
+ * @param {{ agent_role: string, version_label: string, template: string, description?: string }} payload
+ * @returns {Promise<Record<string, unknown>>}
+ */
+export async function createPromptVersion(payload) {
+  const res = await fetch(`${BASE_URL}/prompts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
+ * PATCH /llm-review/prompts/{id} — description / is_active only.
+ * @param {number} versionId
+ * @param {{ description?: string, is_active?: boolean }} payload
+ * @returns {Promise<Record<string, unknown>>}
+ */
+export async function updatePromptVersion(versionId, payload) {
+  const res = await fetch(`${BASE_URL}/prompts/${versionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await throwForResponse(res);
+  return res.json();
+}
+
+/**
  * GET /llm-review/compare/papers
  * @returns {Promise<Array<{ paper_path: string, title: string, conference: string }>>}
  */

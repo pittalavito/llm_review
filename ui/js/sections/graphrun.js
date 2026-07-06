@@ -3,7 +3,7 @@
  * The compiled config table becomes editable in-place when "Ricompila" is clicked.
  */
 
-import { listPapers, listModels, getGraphConfig, compileGraph, runGraph } from '../api.js';
+import { listPapers, listModels, getGraphConfig, compileGraph, runGraph, listPromptVersions } from '../api.js';
 
 const AGENT_LABELS = {
   reviewer_1:   '👤 Reviewer 1',
@@ -119,10 +119,16 @@ export async function mount(el) {
   let currentConfig = null;
   let models        = [];
   let editMode      = false;
+  let versionsByRole = {};
 
   let papers = [];
   try {
-    [papers, models, currentConfig] = await Promise.all([listPapers(), listModels(), getGraphConfig()]);
+    let promptVersions = [];
+    [papers, models, currentConfig, promptVersions] = await Promise.all([
+      listPapers(), listModels(), getGraphConfig(),
+      listPromptVersions().catch(() => []),
+    ]);
+    versionsByRole = groupVersionsByRole(promptVersions);
   } catch (e) {
     configBody.innerHTML = `<p class="error-msg">Errore: ${e.message}</p>`;
     return;
@@ -142,7 +148,7 @@ export async function mount(el) {
   function enterEditMode() {
     editMode = true;
     const prefill = currentConfig || defaultConfig();
-    renderEditable(configBody, prefill, models);
+    renderEditable(configBody, prefill, models, versionsByRole);
     actionBtn.textContent = '⚙ Compila';
     actionBtn.className   = 'btn btn--secondary btn--sm';
     cancelBtn.hidden      = false;
@@ -247,6 +253,7 @@ function renderReadOnly(container, config) {
         <td>${AGENT_LABELS[a.agent_name] || a.agent_name}</td>
         <td><code>${a.model}</code></td>
         <td>${a.temperature}</td>
+        <td><code>${a.prompt_version ?? 'v1'}</code></td>
         <td>${extra}</td>
       </tr>
     `;
@@ -254,7 +261,7 @@ function renderReadOnly(container, config) {
   container.innerHTML = `
     <p class="gr-config-meta">Max rounds: <strong>${config.max_rounds ?? '?'}</strong></p>
     <table class="gr-config-table">
-      <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th><th>Persona / Stile</th></tr></thead>
+      <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th><th>Prompt</th><th>Persona / Stile</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
@@ -264,12 +271,26 @@ function renderReadOnly(container, config) {
 // Config table — editable in-place
 // ---------------------------------------------------------------------------
 
-function renderEditable(container, config, models) {
+function renderEditable(container, config, models, versionsByRole = {}) {
   const maxRounds = config.max_rounds ?? 2;
   const rows = AGENT_NAMES.map(name => {
     const existing = config.agents?.find(a => a.agent_name === name);
     const model    = existing?.model       ?? 'mock';
     const temp     = existing?.temperature ?? 0.7;
+
+    const role       = roleForAgent(name);
+    const selectedPv = existing?.prompt_version ?? 'v1';
+    // Keep the currently-selected label visible even if it was deactivated.
+    const pvOptions  = (versionsByRole[role] || []).includes(selectedPv)
+      ? versionsByRole[role]
+      : [selectedPv, ...(versionsByRole[role] || [])];
+    const promptCell = `
+      <td>
+        <select class="form-select gr-prompt-sel" style="width:auto;font-size:0.75rem">
+          ${pvOptions.map(v => `<option value="${v}" ${v === selectedPv ? 'selected' : ''}>${v}</option>`).join('')}
+        </select>
+      </td>
+    `;
 
     let extraCell = '<td></td>';
 
@@ -318,6 +339,7 @@ function renderEditable(container, config, models) {
           <input type="number" class="form-input gr-temp-inp"
                  value="${temp}" min="0" max="2" step="0.1" style="width:5rem"/>
         </td>
+        ${promptCell}
         ${extraCell}
       </tr>
     `;
@@ -332,7 +354,7 @@ function renderEditable(container, config, models) {
       </div>
     </div>
     <table class="gr-config-table gr-config-table--edit">
-      <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th><th>Persona / Stile</th></tr></thead>
+      <thead><tr><th>Agente</th><th>Modello</th><th>Temp</th><th>Prompt</th><th>Persona / Stile</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   `;
@@ -351,6 +373,7 @@ function readFormValues(container) {
       agent_name:  name,
       model:       row.querySelector('.gr-model-sel').value,
       temperature: parseFloat(row.querySelector('.gr-temp-inp').value),
+      prompt_version: row.querySelector('.gr-prompt-sel')?.value ?? 'v1',
     };
 
     if (REVIEWER_NAMES.includes(name)) {
@@ -510,6 +533,20 @@ function defaultConfig() {
       { agent_name: 'author_agent',  model: 'mock', temperature: 0.7 },
     ],
   };
+}
+
+function roleForAgent(name) {
+  return REVIEWER_NAMES.includes(name) ? 'reviewer' : name;
+}
+
+/** {role: [labels...]} from GET /prompts (active versions only). */
+function groupVersionsByRole(versions) {
+  const byRole = {};
+  for (const v of versions) {
+    (byRole[v.agent_role] ??= []).push(v.version_label);
+  }
+  for (const role of Object.keys(byRole)) byRole[role].sort();
+  return byRole;
 }
 
 function showError(el, msg) { el.textContent = msg; el.hidden = false; }

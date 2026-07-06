@@ -147,7 +147,7 @@ All cross-platform Python. Run with `uv run python scripts/<name>.py`.
 1. ~~**No DB/FTP integration**~~ — **done**: runs live in SQLite (SQLModel), RAG indices are cached in Redis with file fallback. Papers are still plain files under `resource/papers/`.
 2. **No file upload from the UI** — a paper must be manually placed in `resource/papers/` and then indexed by hand.
 3. **Naive RAG** — the retrieval is basic and could be improved.
-4. **UI improvements** — the UI could be rebuilt with Streamlit.
+4. ~~**UI improvements**~~ — **decided**: the vanilla JS UI is the final one (Streamlit idea dropped — plain web programming fits the thesis better). Prompt-version management UI added.
 5. ~~**Prompt versioning**~~ — **done**: base prompts live in the `prompt_version` table, are editable via the `/prompts` API, selectable per agent at compile time, and recorded per run.
 6. **Containerization** — Redis already runs via docker-compose; the app itself could be containerized too.
 7. **Custom mock runs** — allow building custom runs reusing real past responses as mocks, reading them from the DB/Redis.
