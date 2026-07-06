@@ -31,4 +31,16 @@ async def lifespan(app: FastAPI):
 # 3. Create FastAPI app and include routes
 app = FastAPI(lifespan=lifespan, title=config.app_name, version=config.app_version)
 app.include_router(dev_router)
-app.mount("/", StaticFiles(directory=UI_DIR, html=True), name="ui")
+
+
+class NoCacheStaticFiles(StaticFiles):
+    """Serve the UI with no-cache: browsers keep stale JS modules across
+    deploys otherwise (dev app, tiny files — revalidating every time is fine)."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/", NoCacheStaticFiles(directory=UI_DIR, html=True), name="ui")
