@@ -4,19 +4,21 @@ from models.agent import AgentName
 
 class AgentRun(BaseModel):
     """Complete trace of a single agent invocation."""
+    
     agent: AgentName
-    round: int                   # 0-based
+    round: int           
     input_message: str
-    context_used: str | None     # RAG chunks injected (if any)
-    response_payload: dict       # structured response
+    context_used: str | None    
+    response_payload: dict  
     prompt_trace: dict | None = None
     runtime_trace: dict | None = None
 
 
 class RunRecord(BaseModel):
     """Complete record of a single review graph execution."""
-    run_id: str                  # e.g. "2026-04-21T14-32-00_paper-name"
-    timestamp: str               # ISO 8601
+    
+    run_id: str                
+    timestamp: str              
     paper_path: str
     run_description: str | None = None
     decision: str | None
@@ -32,6 +34,7 @@ class RunRecord(BaseModel):
 
 class RunSummary(BaseModel):
     """Lightweight version of RunRecord for the run history list."""
+    
     run_id: str
     timestamp: str
     paper_path: str

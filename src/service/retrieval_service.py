@@ -1,8 +1,8 @@
 import logging
 
-from retrieval.cache import build_index_repository
-from retrieval.indexing import IndexBuilder, PaperFileReader
-from retrieval.ranking import BM25Ranker, BM25Tokenizer, ContextBuilder
+from domain.retrieval.cache import build_index_repository
+from domain.retrieval.indexing import IndexBuilder, PaperFileReader
+from domain.retrieval.ranking import BM25Ranker, BM25Tokenizer, ContextBuilder
 from models.retrieval import FileSignature, Index, IndexInfo, RetrievalMetadata
 from config import PAPERS_DIR, RAG_INDEX_DIR, Config
 
@@ -11,17 +11,16 @@ logger = logging.getLogger(__name__)
 
 _LOGGER_PREFIX = "[RetrievalService]"
 
-
 class RetrievalService:
 
     def __init__(self, config: Config):
         
-        self.config = config
+        
         papers_dir = PAPERS_DIR.resolve()
         index_dir = RAG_INDEX_DIR.resolve()
-
         tokenizer = BM25Tokenizer()
         
+        self.config = config
         self._ranker = BM25Ranker(tokenizer)
         self._file_adapter = PaperFileReader(papers_dir)
         self._index_repository = build_index_repository(config, index_dir)
@@ -30,8 +29,11 @@ class RetrievalService:
 
     def list_papers(self) -> list[str]:
         """Return relative paths of all available paper files."""
+        
         logger.info(f"{_LOGGER_PREFIX} Listing papers in directory: {PAPERS_DIR}")
+        
         papers_dir = self._file_adapter.papers_dir
+        
         return sorted(
             f.relative_to(papers_dir).as_posix()
             for f in papers_dir.rglob("*")
@@ -46,8 +48,10 @@ class RetrievalService:
         _, relative_path = self._file_adapter.resolve_paper_path(paper_path)
         doc_id = self._index_repository.compute_doc_id(relative_path)
         index_payload = self._index_repository.load(doc_id)
+        
         if index_payload is None:
             raise ValueError(f"No index found for paper: {relative_path}")
+        
         return IndexInfo(
             doc_id=index_payload.doc_id,
             paper_path=index_payload.paper_path,
@@ -73,6 +77,7 @@ class RetrievalService:
         file_signature = self._file_adapter.build_file_signature(resolved_path)
 
         index_payload = self._index_repository.load(doc_id)
+        
         if force_reindex or not self._is_index_valid(index_payload, relative_path, file_signature):
             index_payload = self._build_index(resolved_path, relative_path, doc_id, file_signature)
             index_status = "rebuilt"

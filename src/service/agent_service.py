@@ -1,25 +1,21 @@
 import logging
 
 from threading import RLock
-
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from agent.base import BaseAgent
-from agent.impl.area_chair_agent import AreaChairAgent
-from agent.impl.author_agent import AuthorAgent
-from agent.impl.meta_reviewer import MetaReviewerAgent
-from agent.impl.reviewer_agent import ReviewerAgent
-from client.factory import CLIENT_FACTORIES
 from config import Config
-from graph.config import GraphAgentConfig
-from models.agent import (
-    AgentName,
-    AgentResponse,
-    AreaChairStyle,
-    LlmModelName,
-    ReviewerPersona,
-    agent_role,
-)
+
+from domain.agent.base import BaseAgent
+from domain.agent.impl.area_chair_agent import AreaChairAgent
+from domain.agent.impl.author_agent import AuthorAgent
+from domain.agent.impl.meta_reviewer import MetaReviewerAgent
+from domain.agent.impl.reviewer_agent import ReviewerAgent
+
+from domain.client.factory import create_client
+from domain.graph.config import GraphAgentConfig
+
+from models.agent import AgentName, AgentResponse, AreaChairStyle, LlmModelName, ReviewerPersona
+
 from service.retrieval_context_provider import RetrievalContextProvider
 
 
@@ -53,7 +49,8 @@ class AgentService:
             return self._client_cache[key]
         with self._cache_lock:
             if key not in self._client_cache:
-                self._client_cache[key] = self._create_client(model, key[1])
+                logger.info(f"{_LOGGER_PREFIX} Creating client model={model} temp={temperature}")
+                self._client_cache[key] = create_client(self, model, key[1])
             return self._client_cache[key]
 
     def init_agent(
@@ -84,12 +81,9 @@ class AgentService:
             self._agent_cache[key] = agent
             return agent
 
-    def init_agents_from_graph_config(
-        self,
-        agents_config: GraphAgentConfig,
-        retrieval_service=None,
-        prompt_repository=None,
-    ) -> dict[AgentName, BaseAgent]:
+    def init_agents_from_graph_config(self, agents_config: GraphAgentConfig, retrieval_service=None, prompt_repository=None) -> dict[AgentName, BaseAgent]:
+        """ Initialize agents based on a GraphAgentConfig, optionally using a retrieval service and prompt repository."""
+        
         return {
             a.agent_name: self.init_agent(
                 a.agent_name, a.model, a.temperature, retrieval_service,
@@ -101,35 +95,31 @@ class AgentService:
             for a in agents_config.agents
         }
 
-    @staticmethod
-    def _resolve_prompt_template(prompt_repository, agent_config) -> str | None:
-        """Base template from the DB registry; None (code default) when no
-        repository is wired. Unknown/inactive label -> ValueError."""
-        if prompt_repository is None:
-            return None
-        role = agent_role(agent_config.agent_name)
-        return prompt_repository.get_by_role_label(role, agent_config.prompt_version).template
-
     def invoke_client(self, model: LlmModelName, temperature: float, message: str) -> str:
         return self.init_client(model, temperature).invoke(message).content
 
     def run_agent(self, name: AgentName, model: LlmModelName, temperature: float, message: str) -> AgentResponse:
         return self.init_agent(name, model, temperature).run(message)
 
-    @staticmethod
-    def build_prompt_preview(name: AgentName, message: str,
-                             system_prompt_override: str | None = None) -> dict:
+    def build_prompt_preview(self, name: AgentName, message: str, system_prompt_override: str | None = None) -> dict:
         """Build prompt preview for a given agent — no LLM instantiation needed."""
-        return AgentService.get_agent_class(name).build_preview(
-            message, system_prompt_override=system_prompt_override
-        )
+        
+        return self.get_agent_class(name).build_preview(message, system_prompt_override=system_prompt_override)
 
-    @staticmethod
-    def get_agent_class(name: AgentName) -> type[BaseAgent]:
+    def get_agent_class(self, name: AgentName) -> type[BaseAgent]:
         try:
             return _AGENT_CLASSES[name]
         except KeyError as exc:
             raise ValueError(f"Unsupported agent name: {name}") from exc
+
+    def _resolve_prompt_template(self, prompt_repository, agent_config) -> str | None:
+        """Base template from the DB registry; None (code default) when no
+        repository is wired. Unknown/inactive label -> ValueError."""
+        
+        if prompt_repository is None:
+            return None
+        role = agent_config.agent_name.role()
+        return prompt_repository.get_by_role_label(role, agent_config.prompt_version).template
 
     def _normalize_temperature(self, temperature: float) -> float:
         return round(float(temperature), 3)
@@ -149,19 +139,16 @@ class AgentService:
         style: AreaChairStyle | None,
         prompt_template: str | None = None,
     ) -> BaseAgent:
+        """Instantiate an agent based on its name, client, and optional persona/style."""
+        
         agent_class = self.get_agent_class(name)
+        
         if name in _REVIEWER_NAMES:
             return agent_class(client=client, agent_name=name, persona=persona, base_template=prompt_template)
         if name == AgentName.AREA_CHAIR and style is not None:
             return agent_class(client=client, style=style, base_template=prompt_template)
+        
         return agent_class(client=client, base_template=prompt_template)
-
-    def _create_client(self, model: LlmModelName, temperature: float) -> BaseChatModel:
-        for predicate, factory in CLIENT_FACTORIES:
-            if predicate(model):
-                logger.info(f"{_LOGGER_PREFIX} Building {factory.__name__} model={model} temp={temperature}")
-                return factory(model, temperature, self.config)
-        raise ValueError(f"Unsupported LLM model: {model}")
 
     def _build_context_provider(
         self,
@@ -169,6 +156,8 @@ class AgentService:
         retrieval_service,
         agent_instance: BaseAgent | None = None,
     ) -> RetrievalContextProvider | None:
+        """Build a RetrievalContextProvider for the given agent class and instance, if applicable."""
+        
         if agent_class.RAG_QUERY == "" or retrieval_service is None:
             return None
 

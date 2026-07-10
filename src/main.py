@@ -11,10 +11,12 @@ from config import Config, UI_DIR
 # 1. Configure logging and load configuration
 config = Config()
 log_level = getattr(logging, config.app_log_level.upper(), logging.INFO)
-_handler = logging.StreamHandler()
-_handler.setFormatter(DefaultFormatter("%(levelprefix)s %(message)s", use_colors=True))
+
+handler = logging.StreamHandler()
+handler.setFormatter(DefaultFormatter("%(levelprefix)s %(message)s", use_colors=True))
+
 logging.root.setLevel(log_level)
-logging.root.handlers = [_handler]
+logging.root.handlers = [handler]
 logger = logging.getLogger(__name__)
 
 # 2. Application lifespan management

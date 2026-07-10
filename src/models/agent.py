@@ -74,12 +74,12 @@ class AgentName(StrEnum):
     AREA_CHAIR = "area_chair"
     AUTHOR_AGENT = "author_agent"
 
-
-def agent_role(name: AgentName | str) -> str:
-    """Prompt-versioning role: the three reviewers share one base template."""
-    if str(name).startswith("reviewer_"):
-        return "reviewer"
-    return str(name)
+    def role(self) -> str:
+        """Prompt-versioning role: the three reviewers share one base template."""
+        
+        if str(self).startswith("reviewer_"):
+            return "reviewer"
+        return str(self)
 
 
 ##########################################################

@@ -2,26 +2,28 @@ import logging
 
 from datetime import datetime, timezone
 from threading import RLock
+
 from config import Config
-from db.sql_result_repository import SqlResultRepository
+
+from domain.db.result_repository import ResultRepository
+from domain.agent.base import BaseAgent
+from domain.graph.config import GraphAgentConfig
+from domain.graph.state import ReviewState
+from domain.graph.builder import build_graph
+
 from models.agent import AgentName
 from models.run_record import AgentRun, RunRecord
-from agent.base import BaseAgent
-from graph.builder import GraphBuilder
-from graph.config import GraphAgentConfig
-from graph.state import ReviewState
+
 from service.retrieval_service import RetrievalService
 
 
 logger = logging.getLogger(__name__)
-
 _LOGGER_PREFIX = "[GraphService]"
 
 
 class GraphService:
 
-    def __init__(self, config: Config, retrieval_service: RetrievalService,
-                 result_repository: SqlResultRepository):
+    def __init__(self, config: Config, retrieval_service: RetrievalService, result_repository: ResultRepository):
         self._config = config
         self._retrieval_service = retrieval_service
         self._graph_config: GraphAgentConfig | None = None
@@ -32,7 +34,7 @@ class GraphService:
     def compile(self, agents: dict[AgentName, BaseAgent], graph_config: GraphAgentConfig) -> None:
         with self._lock:
             self._graph_config = graph_config
-            self._graph = GraphBuilder.build(agents).compile()
+            self._graph = build_graph(agents).compile()
         
         logger.info(f"{_LOGGER_PREFIX} Graph compiled — agents={len(agents)} max_rounds={graph_config.max_rounds}")
 

@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from models.agent import AgentName, LlmModelName
-from graph.config import GraphAgentConfig
+from domain.graph.config import GraphAgentConfig
 
 AgentRole = Literal["reviewer", "meta_reviewer", "area_chair", "author_agent"]
 

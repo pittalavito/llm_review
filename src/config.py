@@ -15,7 +15,7 @@ RESULTS_DIR = RESOURCE_DIR / "results"
 OPENREVIEW_DIR = RESOURCE_DIR / "openreview"
 DB_DIR = RESOURCE_DIR / "db"
 
-APP_VERSION = "0.1.0"
+_APP_VERSION = "0.1.0"
 
 # ---------------------------------------------------------------------------
 class Config(BaseSettings):
@@ -29,7 +29,7 @@ class Config(BaseSettings):
     
     # --- App ---
     app_name: str = "llm-review"
-    app_version: str = "0.1.0"
+    app_version: str = _APP_VERSION
     app_log_level: str = "INFO"
 
     # --- Ollama ---
@@ -62,3 +62,4 @@ class Config(BaseSettings):
     rag_top_k_default: int = 10
     rag_max_context_chars: int = 12_000
     rag_strategy_version: str = "bm25-v3-section"
+        
