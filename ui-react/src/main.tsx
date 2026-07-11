@@ -17,6 +17,8 @@ import './styles/graphrun.css';
 
 import AppLayout from './layout/AppLayout';
 import Placeholder from './sections/Placeholder';
+import Health from './sections/Health';
+import TestLlm from './sections/TestLlm';
 
 const router = createBrowserRouter(
   [
@@ -25,8 +27,8 @@ const router = createBrowserRouter(
       element: <AppLayout />,
       children: [
         { index: true, element: <Navigate to="/health" replace /> },
-        { path: 'health', element: <Placeholder title="Health Check" /> },
-        { path: 'test-llm', element: <Placeholder title="Test LLM" /> },
+        { path: 'health', element: <Health /> },
+        { path: 'test-llm', element: <TestLlm /> },
         { path: 'test-agent', element: <Placeholder title="Test Agent" /> },
         { path: 'test-rag', element: <Placeholder title="Test RAG" /> },
         { path: 'prompts', element: <Placeholder title="Prompt Versions" /> },
