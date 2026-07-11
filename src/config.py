@@ -5,19 +5,52 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # ---------------------------------------------------------------------------
 # Directory paths
 # ---------------------------------------------------------------------------
+
 _ROOT = Path(__file__).parents[1]
 
 UI_DIR = _ROOT / "ui"
 RESOURCE_DIR = _ROOT / "resource"
+
+OPENREVIEW_INDEX_DIR = RESOURCE_DIR / "open-review-index.json"
+OPENREVIEW_DIR = RESOURCE_DIR / "openreview"
+
 PAPERS_DIR = RESOURCE_DIR / "papers"
 RAG_INDEX_DIR = RESOURCE_DIR / "rag-index"
-RESULTS_DIR = RESOURCE_DIR / "results"
-OPENREVIEW_DIR = RESOURCE_DIR / "openreview"
+
 DB_DIR = RESOURCE_DIR / "db"
 
-_APP_VERSION = "0.1.0"
+def get_ui_dir() -> Path:
+    """Get the UI directory path."""
+    return UI_DIR
+
+
+def get_openreview_index_dir() -> Path:
+    """Get the OpenReview index path."""
+    return OPENREVIEW_INDEX_DIR
+
+
+def get_openreview_dir() -> Path:
+    """Get the OpenReview directory path."""
+    return OPENREVIEW_DIR
+
+
+def get_papers_dir() -> Path:
+    """Get the papers directory path."""
+    return PAPERS_DIR.resolve()
+
+
+def get_rag_index_dir() -> Path:
+    """Get the RAG index directory path."""
+    return RAG_INDEX_DIR.resolve()
+
+def get_db_dir() -> Path:
+    """Get the database directory path."""
+    return DB_DIR.resolve()
 
 # ---------------------------------------------------------------------------
+# Configuration class
+# ---------------------------------------------------------------------------
+
 class Config(BaseSettings):
     """Configuration class for the application. Loads settings from environment variables and .env file."""
 
@@ -29,7 +62,7 @@ class Config(BaseSettings):
     
     # --- App ---
     app_name: str = "llm-review"
-    app_version: str = _APP_VERSION
+    app_version: str = "0.2.0"
     app_log_level: str = "INFO"
 
     # --- Ollama ---
@@ -49,11 +82,11 @@ class Config(BaseSettings):
     anthropic_api_key: str | None = None
 
     # --- Database ---
-    database_url: str | None = None      # None -> sqlite:///{DB_DIR}/llm-review.sqlite
+    database_url: str | None = None         # None -> sqlite:///{DB_DIR}/llm-review.sqlite
     db_echo: bool = False
 
     # --- Redis ---
-    redis_url: str | None = None         # None -> RAG indices served from files only
+    redis_url: str | None = None            # None -> RAG indices served from files only
     redis_index_ttl_seconds: int = 604_800  # 7 days; 0 = cache entries never expire
 
     # --- Retrieval ---

@@ -52,9 +52,7 @@ class ResultRepository:
             session.add(run_row)
             session.flush()
             for config_row in config_rows:
-                config_row.prompt_version_id = self._resolve_prompt_version_id(
-                    session, config_row.agent_name, config_row.prompt_version
-                )
+                config_row.prompt_version_id = self._resolve_prompt_version_id(session, config_row.agent_name, config_row.prompt_version)
             session.add_all(agent_rows)
             session.add_all(config_rows)
             session.commit()
@@ -96,7 +94,7 @@ class ResultRepository:
             return None
         return session.exec(
             select(PromptVersionTable.id).where(
-                PromptVersionTable.agent_role == agent_name.role(),
+                PromptVersionTable.agent_role == AgentName(agent_name).role(),
                 PromptVersionTable.version_label == label,
             )
         ).first()

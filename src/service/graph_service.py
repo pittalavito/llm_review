@@ -5,16 +5,17 @@ from threading import RLock
 
 from config import Config
 
-from domain.db.result_repository import ResultRepository
 from domain.agent.base import BaseAgent
-from domain.graph.config import GraphAgentConfig
 from domain.graph.state import ReviewState
 from domain.graph.builder import build_graph
 
 from models.agent import AgentName
 from models.run_record import AgentRun, RunRecord
+from models.graph import GraphAgentConfig
+
 
 from service.retrieval_service import RetrievalService
+from service.repository_service import RepositoryService
 
 
 logger = logging.getLogger(__name__)
@@ -23,13 +24,13 @@ _LOGGER_PREFIX = "[GraphService]"
 
 class GraphService:
 
-    def __init__(self, config: Config, retrieval_service: RetrievalService, result_repository: ResultRepository):
+    def __init__(self, config: Config, retrieval_service: RetrievalService, repository_service: RepositoryService):
         self._config = config
         self._retrieval_service = retrieval_service
+        self._repository_service = repository_service
         self._graph_config: GraphAgentConfig | None = None
         self._graph = None
         self._lock = RLock()
-        self._result_repository = result_repository
 
     def compile(self, agents: dict[AgentName, BaseAgent], graph_config: GraphAgentConfig) -> None:
         with self._lock:
@@ -59,13 +60,13 @@ class GraphService:
         return self._graph_config.model_dump()
 
     def list_runs(self):
-        return self._result_repository.list()
+        return self._repository_service.list_runs()
 
     def get_run(self, run_id: str):
-        return self._result_repository.get(run_id)
+        return self._repository_service.get_run(run_id)
 
     def get_agent_runs(self, run_id: str, agent_name: AgentName | None = None, round_index: int | None = None) -> list[dict]:
-        runs = self._result_repository.get_agent_runs(run_id, agent_name=agent_name, round_index=round_index)
+        runs = self._repository_service.get_agent_runs(run_id, agent_name=agent_name, round_index=round_index)
         return [r.model_dump() for r in runs]
 
     def _build_initial_state(self, paper_path: str, retrieval_metadata: dict) -> ReviewState:
@@ -85,7 +86,7 @@ class GraphService:
 
     def _save_run(self, result: dict, paper_path: str, run_description: str, retrieval_metadata: dict) -> None:
         try:
-            run_id = self._result_repository.build_run_id(paper_path)
+            run_id = self._repository_service.build_run_id(paper_path)
             agent_runs = [AgentRun.model_validate(r) for r in result.get("agent_runs", [])]
             record = RunRecord(
                 run_id=run_id,
@@ -102,6 +103,6 @@ class GraphService:
                 graph_config=self._graph_config.model_dump(),
                 agent_runs=agent_runs,
             )
-            self._result_repository.save(record)
+            self._repository_service.save(record)
         except Exception:
             logger.exception(f"{_LOGGER_PREFIX} Failed to save run record for paper: {paper_path}")

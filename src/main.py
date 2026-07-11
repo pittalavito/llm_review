@@ -6,7 +6,7 @@ from controller import router as dev_router
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from uvicorn.logging import DefaultFormatter
-from config import Config, UI_DIR
+from config import Config, get_ui_dir
 
 # 1. Configure logging and load configuration
 config = Config()
@@ -45,4 +45,4 @@ class NoCacheStaticFiles(StaticFiles):
         return response
 
 
-app.mount("/", NoCacheStaticFiles(directory=UI_DIR, html=True), name="ui")
+app.mount("/", NoCacheStaticFiles(directory=get_ui_dir(), html=True), name="ui")

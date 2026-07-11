@@ -1,19 +1,15 @@
 from fastapi import Request
-from config import Config, RESOURCE_DIR
+from config import Config, get_openreview_index_dir, get_openreview_dir
 
-from domain.db.engine import create_db_engine, init_db
-from domain.db.prompt_repository import PromptRepository
-from domain.db.result_repository import ResultRepository
-
+from domain.db.engine import create_db_engine
 from domain.agent.prompting.catalog import DEFAULT_PROMPT_SEEDS
-from domain.graph.config import GraphAgentConfig
+from models.graph import GraphAgentConfig
 
 from service.graph_service import GraphService
 from service.agent_service import AgentService
 from service.retrieval_service import RetrievalService
 from service.comparator_service import ReviewComparatorService
-
-_INDEX_PATH = RESOURCE_DIR / "open-review-index.json"
+from service.repository_service import RepositoryService
 
 class Container:
     """DI container: builds and exposes the services, plus the few
@@ -23,15 +19,14 @@ class Container:
         self.config = config
         self.engine = create_db_engine(config)
         
-        self.result_repository = ResultRepository(self.engine)
-        self.prompt_repository = PromptRepository(self.engine)
-        self.prompt_repository.seed_defaults(DEFAULT_PROMPT_SEEDS)
+        self.repository_service = RepositoryService(self.engine)
+        self.repository_service.seed_defaults(DEFAULT_PROMPT_SEEDS)
         
         self.agent_service = AgentService(config)
         self.retrieval_service = RetrievalService(config)
-        self.graph_service = GraphService(config, self.retrieval_service, self.result_repository)
+        self.graph_service = GraphService(config, self.retrieval_service, self.repository_service)
         
-        self.comparator = ReviewComparatorService(result_repository=self.result_repository, index_path=_INDEX_PATH, cache_dir=RESOURCE_DIR / "openreview")
+        self.comparator = ReviewComparatorService(repository_service=self.repository_service, index_path=get_openreview_index_dir(), cache_dir=get_openreview_dir())
 
     def test_agent_with_retrieval(self, name, model, temperature, message: str, paper_path: str, top_k: int | None = None):
         """Run an agent using RAG context retrieved from a paper — agent drives its own retrieval."""
@@ -43,7 +38,7 @@ class Container:
         """Compile the graph of agents based on the provided configuration."""
         
         graph_config = graph_config or GraphAgentConfig.default_config()
-        agents = self.agent_service.init_agents_from_graph_config(graph_config, self.retrieval_service, self.prompt_repository)
+        agents = self.agent_service.init_agents_from_graph_config(graph_config, self.retrieval_service, self.repository_service)
         self.graph_service.compile(agents, graph_config)
 
     def invoke_graph(self, paper_path: str, run_description: str, force_reindex: bool = False) -> tuple[dict, dict]:

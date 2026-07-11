@@ -3,13 +3,12 @@ import logging
 
 from pathlib import Path
 
-from domain.db.result_repository import ResultRepository
-
 from models.agent import AgentName
 from models.comparator import LLMAreaChair, LLMMetaReview, LLMReview, PaperComparison, PaperComparisonResult
 
 from domain.comparator.openreview_client import OpenReviewClient
 from domain.comparator.human_review_parser import HumanReviewParser
+from service.repository_service import RepositoryService
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +19,13 @@ _REJECT_KW = {"reject"}
 
 class ReviewComparatorService:
 
-    def __init__(self, result_repository: ResultRepository, index_path: Path, cache_dir: Path | None = None):
-        self._repo = result_repository
+    def __init__(
+        self, 
+        repository_service: RepositoryService, 
+        index_path: Path, 
+        cache_dir: Path | None = None
+    ):
+        self._repo = repository_service
         self._index: list[dict] = json.loads(index_path.read_text(encoding="utf-8"))
         self._client = OpenReviewClient(cache_dir=cache_dir)
         self._parser = HumanReviewParser()
@@ -52,7 +56,7 @@ class ReviewComparatorService:
         for run_ref in entry.get("runs_system_promt_v1", []):
             run_id: str = run_ref["run_id"]
             try:
-                record = self._repo.get(run_id)
+                record = self._repo.get_run(run_id)
             except ValueError:
                 logger.warning("Run not found on disk: %s", run_id)
                 continue

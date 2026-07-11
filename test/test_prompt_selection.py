@@ -10,10 +10,13 @@ import pytest
 from agent.prompting.reviewer import _BASE_SYSTEM_PROMPT_V2
 from agent.prompting.catalog import DEFAULT_PROMPT_SEEDS
 from config import Config
+
 from db.engine import create_db_engine, init_db
 from db.prompt_repository import PromptRepository
-from graph.config import GraphAgentConfig
+
 from models.agent import AgentName
+from models.graph import GraphAgentConfig
+
 from service.agent_service import AgentService
 
 

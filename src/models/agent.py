@@ -61,6 +61,16 @@ class LlmModelName(StrEnum):
     def is_aitho(self) -> bool:
         return self == self.AITHO_QWEN_3_6
 
+#########################################################
+### AGENT ROLES #########################################
+#########################################################
+
+class AgentRole(StrEnum):
+    REVIEWER = "reviewer"
+    META_REVIEWER = "meta_reviewer"
+    AREA_CHAIR = "area_chair"
+    AUTHOR_AGENT = "author_agent"
+
 
 #########################################################
 ### AGENT NAMES #########################################

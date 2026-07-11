@@ -15,8 +15,10 @@ import re
 import pytest
 from sqlalchemy import text
 
-from config import Config, RESULTS_DIR
+from config import Config, RESOURCE_DIR
 from db.engine import create_db_engine, init_db
+
+RESULTS_DIR = RESOURCE_DIR / "results"
 from db.sql_result_repository import SqlResultRepository
 from models.agent import AgentName
 from models.run_record import RunRecord

@@ -5,11 +5,14 @@ from pathlib import Path
 
 import pytest
 
-# Ensure `src/` is importable when running tests directly with pytest.
+# Ensure `src/` and `src/domain/` are importable when running tests directly with pytest.
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
+DOMAIN = SRC / "domain"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
+if str(DOMAIN) not in sys.path:
+    sys.path.insert(0, str(DOMAIN))
 
 # Fake provider credentials: tests must run without a .env file or real keys.
 # Clients are only constructed, never invoked (MockChatModel handles LLM calls),
@@ -31,7 +34,8 @@ os.environ["REDIS_URL"] = ""  # file-only RAG indices: no Redis in tests
 def seed_run_history():
     """Seed the session database with the committed legacy runs so endpoints
     asserting a non-empty run history keep passing."""
-    from config import Config, RESULTS_DIR
+    from config import Config, RESOURCE_DIR
+    RESULTS_DIR = RESOURCE_DIR / "results"
     from db.engine import create_db_engine, init_db
     from db.import_legacy import import_results_dir
 

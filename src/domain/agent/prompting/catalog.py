@@ -2,6 +2,7 @@
 registered into the prompt_version table at startup (idempotent upsert by
 (agent_role, version_label) — existing rows are never overwritten).
 """
+
 from domain.agent.prompting import reviewer
 from domain.agent.prompting import area_chair, author, meta_reviewer
 

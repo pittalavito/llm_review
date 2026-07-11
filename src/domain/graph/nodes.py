@@ -6,7 +6,7 @@ from domain.agent.base import BaseAgent
 from domain.graph.state import ReviewState
 from domain.agent.prompting import area_chair, author, meta_reviewer, reviewer
 
-from models.agent import AgentName, ReviewDecision
+from models.agent import ReviewDecision
 from models.run_record import AgentRun
 
 

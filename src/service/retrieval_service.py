@@ -4,11 +4,10 @@ from domain.retrieval.cache import build_index_repository
 from domain.retrieval.indexing import IndexBuilder, PaperFileReader
 from domain.retrieval.ranking import BM25Ranker, BM25Tokenizer, ContextBuilder
 from models.retrieval import FileSignature, Index, IndexInfo, RetrievalMetadata
-from config import PAPERS_DIR, RAG_INDEX_DIR, Config
+from config import Config, get_papers_dir, get_rag_index_dir
 
 
 logger = logging.getLogger(__name__)
-
 _LOGGER_PREFIX = "[RetrievalService]"
 
 class RetrievalService:
@@ -16,8 +15,8 @@ class RetrievalService:
     def __init__(self, config: Config):
         
         
-        papers_dir = PAPERS_DIR.resolve()
-        index_dir = RAG_INDEX_DIR.resolve()
+        papers_dir = get_papers_dir()
+        index_dir = get_rag_index_dir()
         tokenizer = BM25Tokenizer()
         
         self.config = config
@@ -30,7 +29,7 @@ class RetrievalService:
     def list_papers(self) -> list[str]:
         """Return relative paths of all available paper files."""
         
-        logger.info(f"{_LOGGER_PREFIX} Listing papers in directory: {PAPERS_DIR}")
+        logger.info(f"{_LOGGER_PREFIX} Listing papers in directory: {get_papers_dir()}")
         
         papers_dir = self._file_adapter.papers_dir
         

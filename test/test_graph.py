@@ -16,7 +16,7 @@ from agent.impl.area_chair_agent import AreaChairAgent
 from agent.impl.author_agent import AuthorAgent
 from client.mock_chat import MockChatModel
 from graph.builder import GraphBuilder
-from graph.edges import ac_decision, should_loop
+from graph.nodes import area_chair_conditional_edges as ac_decision, end_loop_conditional_edges as should_loop
 from graph.nodes import area_chair_node, author_node, meta_node, reviewer_node
 from graph.state import ReviewState
 from langgraph.graph import StateGraph

@@ -7,27 +7,42 @@ dropping the file and re-importing is the migration path.
 
 import json
 import logging
-import domain.db.tables
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlmodel import SQLModel, create_engine
 
-from config import Config, DB_DIR
-
+from config import Config, get_db_dir
 
 logger = logging.getLogger(__name__)
-
 
 def create_db_engine(config: Config) -> Engine:
     """Create the (single, shared) engine from config.database_url,
     defaulting to a SQLite file under resource/db/."""
+        
+    url = _build_uri(config)
+    engine = _create_engine(config, url)
     
-    url = config.database_url
-    if not url:
-        DB_DIR.mkdir(parents=True, exist_ok=True)
-        url = f"sqlite:///{(DB_DIR / 'llm-review.sqlite').as_posix()}"
+    logger.info("Database engine created: %s", url)
+    
+    _init_db(engine=engine)
+    
+    return engine
 
+
+def _build_uri(config: Config) -> str:
+    """Build the database URI from the config."""
+    DB_DIR = get_db_dir()
+    
+    if config.database_url:
+        return config.database_url
+    else:
+        DB_DIR.mkdir(parents=True, exist_ok=True)
+        return f"sqlite:///{(DB_DIR / 'llm-review.sqlite').as_posix()}"
+
+
+def _create_engine(config: Config, url: str) -> Engine:
+    """Create the SQLAlchemy engine from the config."""
     is_sqlite = url.startswith("sqlite")
     engine = create_engine(
         url,
@@ -37,11 +52,6 @@ def create_db_engine(config: Config) -> Engine:
     )
     if is_sqlite:
         event.listen(engine, "connect", _set_sqlite_pragmas)
-
-    logger.info("Database engine created: %s", url)
-    
-    init_db(engine=engine);
-    
     return engine
 
 
@@ -53,7 +63,7 @@ def _set_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
     cursor.close()
 
 
-def init_db(engine: Engine) -> None:
+def _init_db(engine: Engine) -> None:
     """Create all tables if they do not exist."""
 
     SQLModel.metadata.create_all(engine)

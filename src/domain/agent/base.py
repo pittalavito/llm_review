@@ -32,22 +32,16 @@ class BaseAgent(ABC, Generic[T]):
     RAG_QUERY: str | None = ""
     RAG_SECTIONS: list[str] = []
 
-    def __init__(self, client: BaseChatModel, context_provider: ContextProvider | None = None):
+    def __init__(
+        self, 
+        client: BaseChatModel, 
+        context_provider: ContextProvider | None = None
+    ):
         self.client = client
         self.name = self.AGENT_NAME
         self._context_provider = context_provider
-        self._prompt = ChatPromptTemplate.from_messages([
-            ("system", self._get_system_prompt()),
-            ("human", "{context}{message}"),
-        ])
+        self._prompt = self._build_prompt_template()
         self._chain: Runnable = self._build_chain(client)
-
-    @classmethod
-    def get_system_prompt_for_preview(cls) -> str:
-        return cls.SYSTEM_PROMPT
-
-    def _get_system_prompt(self) -> str:
-        return self.SYSTEM_PROMPT
 
     def run(self, message: str, paper_path: str | None = None) -> AgentResponse[T]:
         normalized = message.strip()
@@ -69,27 +63,20 @@ class BaseAgent(ABC, Generic[T]):
         latency_ms = round((perf_counter() - t0) * 1000, 3)
         ended_at = datetime.now(timezone.utc)
         payload = self._extract_payload(result)
+        
         return AgentResponse(
             agent=self.name,
             payload=payload,
             input_message=normalized,
             context_used=raw_context or None,
             prompt_trace=self._build_prompt_trace(normalized, raw_context),
-            runtime_trace=self._build_runtime_trace(
-                result=result,
-                started_at=started_at,
-                ended_at=ended_at,
-                latency_ms=latency_ms,
-            ),
+            runtime_trace=self._build_runtime_trace(result=result, started_at=started_at, ended_at=ended_at, latency_ms=latency_ms)
         )
 
     @classmethod
     def build_preview(cls, message: str, context: str = "", system_prompt_override: str | None = None) -> dict:
         
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt_override or cls.get_system_prompt_for_preview()),
-            ("human", "{context}{message}"),
-        ])
+        prompt = cls._build_prompt_template_for_preview(system_prompt_override=system_prompt_override)
         context_block = cls._format_context_block(context)
         messages = prompt.format_messages(message=message, context=context_block)
 
@@ -113,6 +100,22 @@ class BaseAgent(ABC, Generic[T]):
             "full_prompt": PROMPT_SEPARATOR.join(parts)
         }
 
+    def _build_prompt_template(self) -> ChatPromptTemplate:
+        return ChatPromptTemplate.from_messages([  
+            ("system", self.SYSTEM_PROMPT),
+            ("human", "{context}{message}"),
+        ])
+
+    def _build_prompt_template_for_preview(self, system_prompt_override: str | None = None) -> ChatPromptTemplate:
+        return ChatPromptTemplate.from_messages([
+            ("system", system_prompt_override or self._get_system_prompt_for_preview()),
+            ("human", "{context}{message}"),
+        ])
+        
+    @classmethod
+    def _get_system_prompt_for_preview(cls) -> str:
+        return cls.SYSTEM_PROMPT
+
     def _build_chain(self, client: BaseChatModel) -> Runnable:
         if self.RESPONSE_SCHEMA is not None:
             return self._prompt | client.with_structured_output(self.RESPONSE_SCHEMA)
@@ -120,7 +123,7 @@ class BaseAgent(ABC, Generic[T]):
 
     def _build_prompt_trace(self, message: str, raw_context: str) -> dict:
         return build_prompt_trace(
-            system_prompt=self._get_system_prompt(),
+            system_prompt=self.SYSTEM_PROMPT,
             response_schema=self.RESPONSE_SCHEMA,
             message=message,
             raw_context=raw_context,

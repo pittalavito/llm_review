@@ -12,9 +12,9 @@ from domain.agent.impl.meta_reviewer import MetaReviewerAgent
 from domain.agent.impl.reviewer_agent import ReviewerAgent
 
 from domain.client.factory import create_client
-from domain.graph.config import GraphAgentConfig
 
 from models.agent import AgentName, AgentResponse, AreaChairStyle, LlmModelName, ReviewerPersona
+from models.graph import GraphAgentConfig
 
 from service.retrieval_context_provider import RetrievalContextProvider
 

@@ -2,10 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from models.agent import AgentName, LlmModelName
-from domain.graph.config import GraphAgentConfig
-
-AgentRole = Literal["reviewer", "meta_reviewer", "area_chair", "author_agent"]
+from models.agent import AgentName, LlmModelName, AgentRole
+from models.graph import GraphAgentConfig
 
 
 def _strip_nonempty(value: str, name: str) -> str:

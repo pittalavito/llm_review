@@ -2,8 +2,9 @@ import logging
 
 from container import Container, inject_container
 from fastapi import APIRouter, Depends, HTTPException, Query
-from domain.graph.config import GraphAgentConfig
+
 from models.agent import AgentName, LlmModelName
+from models.graph import GraphAgentConfig
 from models.controller import (GraphRunRequest, IndexPaperRequest, PreviewPromptRequest, PromptVersionCreateRequest, PromptVersionUpdateRequest, TestAgentRequest, TestAgentWithRetrievalRequest, TestLlmRequest)
 
 
@@ -37,10 +38,8 @@ URI_COMPARE = "/compare"
 async def health_check(container: Container = Depends(inject_container)) -> dict:
     """Health check endpoint to verify the service is running and return the application version."""
     
-    return {
-        "status": "ok", 
-        "version": container.config.app_version
-    }
+    return {"status": "ok", "version": container.config.app_version}
+
 
 
 @router.get(URI_MODELS)
@@ -126,7 +125,7 @@ def agent_prompt_preview(body: PreviewPromptRequest, container: Container = Depe
         if body.prompt_version:
             agent_role_label = body.name.role()
             prompt_version = body.prompt_version
-            override = container.prompt_repository.get_by_role_label(agent_role_label, prompt_version).template
+            override = container.repository_service.get_by_role_label(agent_role_label, prompt_version).template
         
         return container.agent_service.build_prompt_preview(body.name, body.message, override)
     except ValueError as exc:
@@ -197,7 +196,7 @@ def run_graph(body: GraphRunRequest, container: Container = Depends(inject_conta
 def list_prompt_versions(agent_role: str | None = None, include_inactive: bool = False, container: Container = Depends(inject_container)) -> list[dict]:
     """Registry metadata (template text only in the detail endpoint)."""
     
-    rows = container.prompt_repository.list(agent_role, include_inactive)
+    rows = container.repository_service.list_prompts(agent_role, include_inactive)
     return [row.model_dump(exclude={"template"}) for row in rows]
 
 
@@ -206,7 +205,7 @@ def get_prompt_version(version_id: int, container: Container = Depends(inject_co
     """Get details of a specific prompt version by its ID."""
     
     try:
-        return container.prompt_repository.get(version_id).model_dump()
+        return container.repository_service.get_prompt(version_id).model_dump()
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -216,7 +215,7 @@ def create_prompt_version(body: PromptVersionCreateRequest, container: Container
     """Register a new immutable prompt version."""
     
     try:
-        row = container.prompt_repository.create(body.agent_role, body.version_label, body.template, body.description)
+        row = container.repository_service.create_prompt(body.agent_role, body.version_label, body.template, body.description)
         return row.model_dump()
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -229,7 +228,7 @@ def update_prompt_version(version_id: int, body: PromptVersionUpdateRequest, con
     """Update description/is_active only — templates are immutable."""
     
     try:
-        row = container.prompt_repository.update_meta(version_id, description=body.description, is_active=body.is_active)
+        row = container.repository_service.update_prompt_meta(version_id, description=body.description, is_active=body.is_active)
         return row.model_dump()
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
