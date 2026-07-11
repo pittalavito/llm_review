@@ -9,9 +9,9 @@ import json
 import pytest
 
 from config import Config
-from db.engine import create_db_engine, init_db
-from db.import_legacy import import_results_dir
-from db.sql_result_repository import SqlResultRepository
+from domain.db.engine import create_db_engine
+from domain.db.import_legacy import import_results_dir
+from domain.db.result_repository import ResultRepository
 
 from test_db_repository import make_record
 
@@ -20,7 +20,6 @@ from test_db_repository import make_record
 def engine(tmp_path):
     config = Config(database_url=f"sqlite:///{(tmp_path / 'test.sqlite').as_posix()}")
     engine = create_db_engine(config)
-    init_db(engine)
     return engine
 
 
@@ -41,7 +40,7 @@ class TestImportResultsDir:
     def test_imports_all_valid_files(self, engine, results_dir):
         report = import_results_dir(engine, results_dir)
         assert (report.imported, report.skipped, report.failed) == (2, 0, 0)
-        assert len(SqlResultRepository(engine).list()) == 2
+        assert len(ResultRepository(engine).list()) == 2
 
     def test_second_run_is_idempotent(self, engine, results_dir):
         import_results_dir(engine, results_dir)
@@ -57,6 +56,6 @@ class TestImportResultsDir:
 
     def test_imported_record_round_trips(self, engine, results_dir):
         import_results_dir(engine, results_dir)
-        repo = SqlResultRepository(engine)
+        repo = ResultRepository(engine)
         loaded = repo.get("2026-01-01T00-00-00_a")
         assert loaded.model_dump() == make_record("2026-01-01T00-00-00_a").model_dump()

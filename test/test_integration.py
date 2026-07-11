@@ -13,10 +13,10 @@ from config import Config
 from container import Container
 from models.agent import AgentName, LlmModelName
 from service.agent_service import AgentService
-from client.mock_chat import MockChatModel
+from domain.client.mock_chat import MockChatModel
 from models.retrieval import FileSignature
 from service.retrieval_service import RetrievalService
-from agent.impl.reviewer_agent import ReviewerAgent
+from domain.agent.impl.reviewer_agent import ReviewerAgent
 from models.agent import AgentResponse
 
 sys.path.insert(0, "src")
@@ -123,12 +123,12 @@ class TestAgentServiceClientFactory:
         with pytest.raises(ValueError, match="ANTHROPIC"):
             svc.init_client(LlmModelName.ANTHROPIC_CLAUDE_SONNET, 0.0)
 
-    def test_get_agent_class_reviewer(self):
-        assert AgentService.get_agent_class(AgentName.REVIEWER_1) is ReviewerAgent
+    def test_get_agent_class_reviewer(self, config):
+        assert AgentService(config).get_agent_class(AgentName.REVIEWER_1) is ReviewerAgent
 
-    def test_get_agent_class_unknown_raises(self):
+    def test_get_agent_class_unknown_raises(self, config):
         with pytest.raises(ValueError):
-            AgentService.get_agent_class("nonexistent_agent")
+            AgentService(config).get_agent_class("nonexistent_agent")
 
     def test_run_agent_returns_agent_response(self, config):
         svc = AgentService(config)

@@ -1,10 +1,10 @@
 import sys
 
-from agent.prompting.area_chair import build_system_prompt as build_area_chair_system_prompt
-from agent.prompting.author import build_system_prompt as build_author_system_prompt
-from agent.prompting.meta_reviewer import build_system_prompt as build_meta_reviewer_system_prompt
-from agent.prompting.reviewer import build_system_prompt as build_reviewer_system_prompt
-from agent.prompting.reviewer import get_rag_focus as get_reviewer_rag_focus
+from domain.agent.prompting.area_chair import build_system_prompt as build_area_chair_system_prompt
+from domain.agent.prompting.author import build_system_prompt as build_author_system_prompt
+from domain.agent.prompting.meta_reviewer import build_system_prompt as build_meta_reviewer_system_prompt
+from domain.agent.prompting.reviewer import build_system_prompt as build_reviewer_system_prompt
+from domain.agent.prompting.reviewer import get_rag_focus as get_reviewer_rag_focus
 from models.agent import (
     AreaChairStyle,
     ReviewerCommitment,

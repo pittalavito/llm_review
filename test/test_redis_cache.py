@@ -15,8 +15,8 @@ import redis
 
 from config import Config, RAG_INDEX_DIR
 from models.retrieval import FileSignature, Index, IndexConfig, IndexedChunk
-from retrieval.cache import CachedIndexRepository, build_index_repository
-from retrieval.indexing import IndexRepository
+from domain.retrieval.cache import CachedIndexRepository, build_index_repository
+from domain.retrieval.indexing import IndexRepository
 
 # ---------------------------------------------------------------------------
 # Fixtures & helpers

@@ -106,9 +106,11 @@ class BaseAgent(ABC, Generic[T]):
             ("human", "{context}{message}"),
         ])
 
-    def _build_prompt_template_for_preview(self, system_prompt_override: str | None = None) -> ChatPromptTemplate:
+    @classmethod
+    def _build_prompt_template_for_preview(cls, system_prompt_override: str | None = None) -> ChatPromptTemplate:
+        # classmethod: build_preview runs without an agent instance (no LLM).
         return ChatPromptTemplate.from_messages([
-            ("system", system_prompt_override or self._get_system_prompt_for_preview()),
+            ("system", system_prompt_override or cls._get_system_prompt_for_preview()),
             ("human", "{context}{message}"),
         ])
         

@@ -1,7 +1,7 @@
-from agent.prompting.area_chair import build_message as build_area_chair_message
-from agent.prompting.author import build_message as build_author_message
-from agent.prompting.meta_reviewer import build_message as build_meta_message
-from agent.prompting.reviewer import build_message as build_reviewer_message
+from domain.agent.prompting.area_chair import build_message as build_area_chair_message
+from domain.agent.prompting.author import build_message as build_author_message
+from domain.agent.prompting.meta_reviewer import build_message as build_meta_message
+from domain.agent.prompting.reviewer import build_message as build_reviewer_message
 from models.agent import AgentName
 
 

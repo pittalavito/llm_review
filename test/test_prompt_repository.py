@@ -9,16 +9,15 @@ PromptRepository tests:
 import pytest
 
 from config import Config
-from db.engine import create_db_engine, init_db
-from db.prompt_repository import PromptRepository
-from agent.prompting.catalog import DEFAULT_PROMPT_SEEDS
+from domain.db.engine import create_db_engine
+from domain.db.prompt_repository import PromptRepository
+from domain.agent.prompting.catalog import DEFAULT_PROMPT_SEEDS
 
 
 @pytest.fixture()
 def repo(tmp_path):
     config = Config(database_url=f"sqlite:///{(tmp_path / 'test.sqlite').as_posix()}")
     engine = create_db_engine(config)
-    init_db(engine)
     return PromptRepository(engine)
 
 

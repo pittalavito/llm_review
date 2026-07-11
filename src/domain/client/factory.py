@@ -1,5 +1,4 @@
 from typing import Callable
-from xml.parsers.expat import model
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_anthropic import ChatAnthropic
@@ -15,7 +14,7 @@ def create_client(self, model: LlmModelName, temperature: float) -> BaseChatMode
     for predicate, factory in _CLIENT_FACTORIES:
         if predicate(model):
             return factory(model, temperature, self.config)
-        raise ValueError(f"Unsupported LLM model: {model}")
+    raise ValueError(f"Unsupported LLM model: {model}")
 
 
 def _build_mock(model: LlmModelName, temperature: float, config: Config) -> BaseChatModel:

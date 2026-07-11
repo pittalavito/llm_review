@@ -1,6 +1,6 @@
 """
 Unit tests for the graph layer:
-  - GraphBuilder.build() — topology
+  - build_graph() — topology
   - Node functions — reviewer_node, meta_node, author_node
   - Conditional edges — _ac_decision, _should_loop
   - Full graph invocation with MockChatModel (accept path + revision loop)
@@ -10,15 +10,15 @@ import json
 import pytest
 
 from models.agent import AgentName, ReviewDecision
-from agent.impl.reviewer_agent import ReviewerAgent
-from agent.impl.meta_reviewer import MetaReviewerAgent
-from agent.impl.area_chair_agent import AreaChairAgent
-from agent.impl.author_agent import AuthorAgent
-from client.mock_chat import MockChatModel
-from graph.builder import GraphBuilder
-from graph.nodes import area_chair_conditional_edges as ac_decision, end_loop_conditional_edges as should_loop
-from graph.nodes import area_chair_node, author_node, meta_node, reviewer_node
-from graph.state import ReviewState
+from domain.agent.impl.reviewer_agent import ReviewerAgent
+from domain.agent.impl.meta_reviewer import MetaReviewerAgent
+from domain.agent.impl.area_chair_agent import AreaChairAgent
+from domain.agent.impl.author_agent import AuthorAgent
+from domain.client.mock_chat import MockChatModel
+from domain.graph.builder import build_graph
+from domain.graph.nodes import area_chair_conditional_edges as ac_decision, end_loop_conditional_edges as should_loop
+from domain.graph.nodes import area_chair_node, author_node, meta_node, reviewer_node
+from domain.graph.state import ReviewState
 from langgraph.graph import StateGraph
 
 
@@ -74,26 +74,26 @@ def fake_reviews() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# GraphBuilder topology
+# Graph topology
 # ---------------------------------------------------------------------------
 
-class TestGraphBuilderTopology:
+class TestGraphTopology:
 
     def test_build_returns_state_graph(self):
         agents = make_agents()
-        graph = GraphBuilder.build(agents)
+        graph = build_graph(agents)
         assert isinstance(graph, StateGraph)
 
     def test_compiled_graph_has_invoke(self):
         agents = make_agents()
-        compiled = GraphBuilder.build(agents).compile()
+        compiled = build_graph(agents).compile()
         assert callable(compiled.invoke)
 
     def test_missing_agent_raises(self):
         agents = make_agents()
         del agents[AgentName.META_REVIEWER]
         with pytest.raises(KeyError):
-            GraphBuilder.build(agents)
+            build_graph(agents)
 
 
 # ---------------------------------------------------------------------------
@@ -299,26 +299,26 @@ class TestFullGraphAcceptPath:
 
     def test_invoke_returns_decision(self):
         agents = make_agents()
-        compiled = GraphBuilder.build(agents).compile()
+        compiled = build_graph(agents).compile()
         state = base_state(max_rounds=1)
         result = compiled.invoke(state)
         assert "decision" in result
 
     def test_invoke_reviews_accumulate(self):
         agents = make_agents()
-        compiled = GraphBuilder.build(agents).compile()
+        compiled = build_graph(agents).compile()
         state = base_state(max_rounds=1)
         result = compiled.invoke(state)
         assert len(result["reviews"]) >= 3
 
     def test_invoke_meta_review_present(self):
         agents = make_agents()
-        compiled = GraphBuilder.build(agents).compile()
+        compiled = build_graph(agents).compile()
         result = compiled.invoke(base_state(max_rounds=1))
         assert result["meta_review"] is not None
 
     def test_invoke_current_round_advanced(self):
         agents = make_agents()
-        compiled = GraphBuilder.build(agents).compile()
+        compiled = build_graph(agents).compile()
         result = compiled.invoke(base_state(max_rounds=1))
         assert result["current_round"] >= 1

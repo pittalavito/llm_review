@@ -14,7 +14,7 @@ project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 from config import Config, RESULTS_DIR  # noqa: E402
-from db.engine import create_db_engine, init_db  # noqa: E402
+from db.engine import create_db_engine  # noqa: E402
 from db.import_legacy import import_results_dir  # noqa: E402
 
 
@@ -32,7 +32,6 @@ def main() -> int:
         config = config.model_copy(update={"database_url": args.database_url})
 
     engine = create_db_engine(config)
-    init_db(engine)
     report = import_results_dir(engine, args.results_dir)
     print(report)
     if report.failed_files:

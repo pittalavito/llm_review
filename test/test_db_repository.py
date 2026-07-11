@@ -1,5 +1,5 @@
 """
-SqlResultRepository tests:
+ResultRepository tests:
   - build_run_id format
   - save -> get round-trip fidelity (incl. double-encoded reviews)
   - round-trip of a real legacy JSON file
@@ -16,10 +16,10 @@ import pytest
 from sqlalchemy import text
 
 from config import Config, RESOURCE_DIR
-from db.engine import create_db_engine, init_db
+from domain.db.engine import create_db_engine
 
 RESULTS_DIR = RESOURCE_DIR / "results"
-from db.sql_result_repository import SqlResultRepository
+from domain.db.result_repository import ResultRepository
 from models.agent import AgentName
 from models.run_record import RunRecord
 
@@ -31,13 +31,12 @@ from models.run_record import RunRecord
 def engine(tmp_path):
     config = Config(database_url=f"sqlite:///{(tmp_path / 'test.sqlite').as_posix()}")
     engine = create_db_engine(config)
-    init_db(engine)
     return engine
 
 
 @pytest.fixture()
 def repo(engine):
-    return SqlResultRepository(engine)
+    return ResultRepository(engine)
 
 
 def make_record(run_id: str = "2026-07-05T10-00-00_test_paper") -> RunRecord:
@@ -146,11 +145,11 @@ def make_record(run_id: str = "2026-07-05T10-00-00_test_paper") -> RunRecord:
 class TestBuildRunId:
 
     def test_format(self):
-        run_id = SqlResultRepository.build_run_id("papers/My Paper (v2).pdf")
+        run_id = ResultRepository.build_run_id("papers/My Paper (v2).pdf")
         assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_My_Paper__v2_$", run_id)
 
     def test_stem_truncated_to_40_chars(self):
-        run_id = SqlResultRepository.build_run_id("x" * 100 + ".pdf")
+        run_id = ResultRepository.build_run_id("x" * 100 + ".pdf")
         stem = run_id.split("_", 1)[1] if "_" in run_id else ""
         assert len(run_id.split("T", 1)[1].split("_", 1)[1]) <= 40 or len(stem) <= 41
 
@@ -335,8 +334,8 @@ class TestAnalyticsColumns:
         assert tuple(row) == ("v1", None)  # label saved; registry empty -> no FK
 
     def test_prompt_version_fk_resolved_with_seeded_registry(self, repo, engine):
-        from agent.prompting.catalog import DEFAULT_PROMPT_SEEDS
-        from db.prompt_repository import PromptRepository
+        from domain.agent.prompting.catalog import DEFAULT_PROMPT_SEEDS
+        from domain.db.prompt_repository import PromptRepository
 
         prompt_repo = PromptRepository(engine)
         prompt_repo.seed_defaults(DEFAULT_PROMPT_SEEDS)

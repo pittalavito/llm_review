@@ -15,12 +15,12 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import RunnableLambda
-from agent.base import BaseAgent
-from agent.impl.reviewer_agent import ReviewerAgent
-from agent.impl.meta_reviewer import MetaReviewerAgent
-from agent.impl.area_chair_agent import AreaChairAgent
-from agent.impl.author_agent import AuthorAgent
-from client.mock_chat import MockChatModel
+from domain.agent.base import BaseAgent
+from domain.agent.impl.reviewer_agent import ReviewerAgent
+from domain.agent.impl.meta_reviewer import MetaReviewerAgent
+from domain.agent.impl.area_chair_agent import AreaChairAgent
+from domain.agent.impl.author_agent import AuthorAgent
+from domain.client.mock_chat import MockChatModel
 from models.agent import (
     AgentName,
     AgentResponse,

@@ -5,14 +5,13 @@ from pathlib import Path
 
 import pytest
 
-# Ensure `src/` and `src/domain/` are importable when running tests directly with pytest.
+# Ensure `src/` is importable when running tests directly with pytest.
+# NOTE: src/domain must NOT be added too — importing the same module under
+# two names (db.x and domain.db.x) duplicates classes and breaks isinstance.
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
-DOMAIN = SRC / "domain"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
-if str(DOMAIN) not in sys.path:
-    sys.path.insert(0, str(DOMAIN))
 
 # Fake provider credentials: tests must run without a .env file or real keys.
 # Clients are only constructed, never invoked (MockChatModel handles LLM calls),
@@ -36,11 +35,10 @@ def seed_run_history():
     asserting a non-empty run history keep passing."""
     from config import Config, RESOURCE_DIR
     RESULTS_DIR = RESOURCE_DIR / "results"
-    from db.engine import create_db_engine, init_db
-    from db.import_legacy import import_results_dir
+    from domain.db.engine import create_db_engine
+    from domain.db.import_legacy import import_results_dir
 
     engine = create_db_engine(Config())
-    init_db(engine)
     import_results_dir(engine, RESULTS_DIR)
     engine.dispose()
     yield
