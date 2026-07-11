@@ -21,6 +21,8 @@ import Health from './sections/Health';
 import TestLlm from './sections/TestLlm';
 import Prompts from './sections/Prompts';
 import Storico from './sections/Storico';
+import TestAgent from './sections/TestAgent';
+import TestRag from './sections/TestRag';
 
 const router = createBrowserRouter(
   [
@@ -31,8 +33,8 @@ const router = createBrowserRouter(
         { index: true, element: <Navigate to="/health" replace /> },
         { path: 'health', element: <Health /> },
         { path: 'test-llm', element: <TestLlm /> },
-        { path: 'test-agent', element: <Placeholder title="Test Agent" /> },
-        { path: 'test-rag', element: <Placeholder title="Test RAG" /> },
+        { path: 'test-agent', element: <TestAgent /> },
+        { path: 'test-rag', element: <TestRag /> },
         { path: 'prompts', element: <Prompts /> },
         { path: 'graph-run', element: <Placeholder title="Graph Run" /> },
         { path: 'storico', element: <Storico /> },
