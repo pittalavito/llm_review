@@ -14,6 +14,7 @@ import './styles/test-agent.css';
 import './styles/test-rag.css';
 import './styles/comparison.css';
 import './styles/graphrun.css';
+import './styles/swagger.css';
 
 import AppLayout from './layout/AppLayout';
 import Health from './sections/Health';
@@ -24,6 +25,7 @@ import TestAgent from './sections/TestAgent';
 import TestRag from './sections/TestRag';
 import GraphRun from './sections/GraphRun';
 import Compare from './sections/Compare';
+import Swagger from './sections/Swagger';
 
 const router = createBrowserRouter(
   [
@@ -36,6 +38,7 @@ const router = createBrowserRouter(
         { path: 'test-llm', element: <TestLlm /> },
         { path: 'test-agent', element: <TestAgent /> },
         { path: 'test-rag', element: <TestRag /> },
+        { path: 'swagger', element: <Swagger /> },
         { path: 'prompts', element: <Prompts /> },
         { path: 'graph-run', element: <GraphRun /> },
         { path: 'storico', element: <Storico /> },

@@ -10,6 +10,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/llm-review': 'http://localhost:8081',
+      '/docs': 'http://localhost:8081',
+      '/openapi.json': 'http://localhost:8081',
     },
   },
 })
