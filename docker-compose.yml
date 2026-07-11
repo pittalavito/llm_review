@@ -2,6 +2,7 @@
 # The app itself runs on the host (scripts/run-app.py, port 8081) and reaches
 # Redis on localhost:6380; set REDIS_URL=redis://localhost:6380/0 in .env.
 # (Host port 6380: 6379 is often taken by other local Docker projects.)
+
 services:
   redis:
     image: redis:7.4-alpine
@@ -18,6 +19,19 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  # Web dashboard for inspecting the cache. Reaches Redis over the compose
+  # network (redis:6379); exposed on host 8082 since 8081 is the app itself.
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: llm-review-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8083:8081"
+    depends_on:
+      - redis
+    restart: unless-stopped
 
 volumes:
   redis-data:

@@ -17,6 +17,7 @@ const DEV_ENTRIES: NavEntry[] = [
   { to: '/test-agent', icon: 'A', label: 'Test Agent' },
   { to: '/test-rag', icon: 'R', label: 'Test RAG' },
   { to: '/swagger', icon: '⌘', label: 'API Docs' },
+  { to: '/redis', icon: '▤', label: 'Redis' },
 ];
 
 const PIPELINE_ENTRIES: NavEntry[] = [

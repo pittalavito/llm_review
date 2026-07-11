@@ -10,6 +10,8 @@ import logging
 import sys
 from pathlib import Path
 
+## To delete
+
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
