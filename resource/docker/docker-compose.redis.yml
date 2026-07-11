@@ -21,7 +21,7 @@ services:
       retries: 5
 
   # Web dashboard for inspecting the cache. Reaches Redis over the compose
-  # network (redis:6379); exposed on host 8082 since 8081 is the app itself.
+  # network (redis:6379); exposed on host 8083 since 8081 is the app itself.
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: llm-review-redis-commander

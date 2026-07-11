@@ -1,6 +1,6 @@
 /** Embeds redis-commander, the web dashboard for the project's Redis cache.
  * Runs as a separate container (docker compose up -d, or
- * scripts/run-redis-dashboard.py) on host port 8082 — start it before opening
+ * scripts/run-redis-dashboard.py) on host port 8083 — start it before opening
  * this section. Absolute URL because it's a different origin than the app. */
 
 const DASHBOARD_URL = 'http://localhost:8083';

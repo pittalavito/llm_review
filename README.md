@@ -125,7 +125,8 @@ There are deliberately no schema migrations (no Alembic): after a schema change,
 BM25 indices (JSON files keyed by SHA-256 under `resource/rag-index/`) are served through a **cache-aside** Redis layer: files remain the source of truth, Redis is a pure read accelerator. If `REDIS_URL` is unset or Redis is unreachable, the app transparently falls back to file-only access (single warning, no crash).
 
 ```
-docker compose up -d          # starts redis:7.4-alpine on localhost:6380
+docker compose -f resource/docker/docker-compose.redis.yml up -d
+# starts redis:7.4-alpine on localhost:6380
 # .env: REDIS_URL=redis://localhost:6380/0
 ```
 
@@ -169,7 +170,7 @@ All cross-platform Python. Run with `uv run python scripts/<name>.py`.
 3. **Naive RAG** — the retrieval is basic and could be improved.
 4. ~~**UI improvements**~~ — **decided**: the vanilla JS UI is the final one (Streamlit idea dropped — plain web programming fits the thesis better). Prompt-version management UI added.
 5. ~~**Prompt versioning**~~ — **done**: base prompts live in the `prompt_version` table, are editable via the `/prompts` API, selectable per agent at compile time, and recorded per run.
-6. **Containerization** — Redis already runs via docker-compose; the app itself could be containerized too.
+6. **Containerization** — Redis already runs via `resource/docker/docker-compose.redis.yml`; the app itself could be containerized too.
 7. **Custom mock runs** — allow building custom runs reusing real past responses as mocks, reading them from the DB/Redis.
 8. **Compare export** — add a UI function to export the comparison as CSV (can now be a SQL query → CSV endpoint) for use in the thesis.
 9. **Dynamic review scope** — let agents set the review scope dynamically (e.g. ICLR, LMN, Other).
