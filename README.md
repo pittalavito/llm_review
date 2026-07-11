@@ -129,6 +129,26 @@ docker compose up -d          # starts redis:7.4-alpine on localhost:6380
 # .env: REDIS_URL=redis://localhost:6380/0
 ```
 
+## Frontend
+
+Two UIs coexist during the React migration:
+
+| UI | Stack | Where | Status |
+|---|---|---|---|
+| Classic | Vanilla JS (ES Modules) in `ui/` | `http://localhost:8081/` | Stable, untouched |
+| New | React 18 + TypeScript + Vite in `ui-react/` | `http://localhost:8081/v2/` (built) or `http://localhost:5173/v2/` (dev) | Full feature parity, under validation |
+
+The React app talks to the same API (`/llm-review`), typed against the Pydantic models. JSX escaping closes the stored-XSS surface the vanilla `storico` section had with LLM-generated text.
+
+```
+cd ui-react
+npm install       # once
+npm run dev       # dev server with proxy to the backend on 8081
+npm run build     # production bundle in ui-react/dist, served by FastAPI at /v2
+```
+
+The switch of `/` to the React UI (and the retirement of the vanilla one) will happen after validation.
+
 ## Scripts
 
 All cross-platform Python. Run with `uv run python scripts/<name>.py`.

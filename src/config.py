@@ -9,6 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _ROOT = Path(__file__).parents[1]
 
 UI_DIR = _ROOT / "ui"
+UI_REACT_DIST_DIR = _ROOT / "ui-react" / "dist"
 RESOURCE_DIR = _ROOT / "resource"
 
 OPENREVIEW_INDEX_DIR = RESOURCE_DIR / "open-review-index.json"
