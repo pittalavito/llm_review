@@ -16,7 +16,6 @@ import './styles/comparison.css';
 import './styles/graphrun.css';
 
 import AppLayout from './layout/AppLayout';
-import Placeholder from './sections/Placeholder';
 import Health from './sections/Health';
 import TestLlm from './sections/TestLlm';
 import Prompts from './sections/Prompts';

@@ -2,7 +2,8 @@
  * App shell: header + sidebar navigation + routed content.
  * Mirrors ui/index.html structure and classes so the existing CSS applies.
  */
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 interface NavEntry {
   to: string;
@@ -38,6 +39,15 @@ function NavItem({ entry }: { entry: NavEntry }) {
 }
 
 export default function AppLayout() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const entry = [...DEV_ENTRIES, ...PIPELINE_ENTRIES].find((e) => e.to === location.pathname);
+    document.title = entry
+      ? `${entry.label} — LLM Review`
+      : 'LLM Review — Academic Review Platform';
+  }, [location.pathname]);
+
   return (
     <>
       <header className="header">
