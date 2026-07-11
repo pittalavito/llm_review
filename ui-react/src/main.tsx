@@ -19,6 +19,8 @@ import AppLayout from './layout/AppLayout';
 import Placeholder from './sections/Placeholder';
 import Health from './sections/Health';
 import TestLlm from './sections/TestLlm';
+import Prompts from './sections/Prompts';
+import Storico from './sections/Storico';
 
 const router = createBrowserRouter(
   [
@@ -31,9 +33,9 @@ const router = createBrowserRouter(
         { path: 'test-llm', element: <TestLlm /> },
         { path: 'test-agent', element: <Placeholder title="Test Agent" /> },
         { path: 'test-rag', element: <Placeholder title="Test RAG" /> },
-        { path: 'prompts', element: <Placeholder title="Prompt Versions" /> },
+        { path: 'prompts', element: <Prompts /> },
         { path: 'graph-run', element: <Placeholder title="Graph Run" /> },
-        { path: 'storico', element: <Placeholder title="Storico Review" /> },
+        { path: 'storico', element: <Storico /> },
         { path: 'comparison', element: <Placeholder title="Confronto Review" /> },
         { path: '*', element: <Navigate to="/health" replace /> },
       ],
