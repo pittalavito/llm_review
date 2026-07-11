@@ -23,6 +23,7 @@ import Prompts from './sections/Prompts';
 import Storico from './sections/Storico';
 import TestAgent from './sections/TestAgent';
 import TestRag from './sections/TestRag';
+import GraphRun from './sections/GraphRun';
 
 const router = createBrowserRouter(
   [
@@ -36,7 +37,7 @@ const router = createBrowserRouter(
         { path: 'test-agent', element: <TestAgent /> },
         { path: 'test-rag', element: <TestRag /> },
         { path: 'prompts', element: <Prompts /> },
-        { path: 'graph-run', element: <Placeholder title="Graph Run" /> },
+        { path: 'graph-run', element: <GraphRun /> },
         { path: 'storico', element: <Storico /> },
         { path: 'comparison', element: <Placeholder title="Confronto Review" /> },
         { path: '*', element: <Navigate to="/health" replace /> },
