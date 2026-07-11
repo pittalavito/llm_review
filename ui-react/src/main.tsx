@@ -24,6 +24,7 @@ import Storico from './sections/Storico';
 import TestAgent from './sections/TestAgent';
 import TestRag from './sections/TestRag';
 import GraphRun from './sections/GraphRun';
+import Compare from './sections/Compare';
 
 const router = createBrowserRouter(
   [
@@ -39,7 +40,7 @@ const router = createBrowserRouter(
         { path: 'prompts', element: <Prompts /> },
         { path: 'graph-run', element: <GraphRun /> },
         { path: 'storico', element: <Storico /> },
-        { path: 'comparison', element: <Placeholder title="Confronto Review" /> },
+        { path: 'comparison', element: <Compare /> },
         { path: '*', element: <Navigate to="/health" replace /> },
       ],
     },
