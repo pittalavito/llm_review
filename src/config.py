@@ -8,7 +8,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ROOT = Path(__file__).parents[1]
 
-UI_DIR = _ROOT / "ui"
 UI_REACT_DIST_DIR = _ROOT / "ui-react" / "dist"
 RESOURCE_DIR = _ROOT / "resource"
 
@@ -19,11 +18,6 @@ PAPERS_DIR = RESOURCE_DIR / "papers"
 RAG_INDEX_DIR = RESOURCE_DIR / "rag-index"
 
 DB_DIR = RESOURCE_DIR / "db"
-
-def get_ui_dir() -> Path:
-    """Get the UI directory path."""
-    return UI_DIR
-
 
 def get_openreview_index_dir() -> Path:
     """Get the OpenReview index path."""

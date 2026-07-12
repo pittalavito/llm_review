@@ -136,23 +136,16 @@ docker compose -f resource/docker/docker-compose.redis.yml up -d
 
 ## Frontend
 
-Two UIs coexist during the React migration:
-
-| UI | Stack | Where | Status |
-|---|---|---|---|
-| Classic | Vanilla JS (ES Modules) in `ui/` | `http://localhost:8081/` | Stable, untouched |
-| New | React 18 + TypeScript + Vite in `ui-react/` | `http://localhost:8081/v2/` (built) or `http://localhost:5173/v2/` (dev) | Full feature parity, under validation |
-
-The React app talks to the same API (`/llm-review`), typed against the Pydantic models. JSX escaping closes the stored-XSS surface the vanilla `storico` section had with LLM-generated text.
+**React 18 + TypeScript + Vite** in `ui-react/`, served by FastAPI at the root (`http://localhost:8081/`). It talks to the same API (`/llm-review`), typed against the Pydantic models; JSX escaping keeps LLM-generated text inert (no `dangerouslySetInnerHTML`).
 
 ```
 cd ui-react
 npm install       # once
-npm run dev       # dev server with proxy to the backend on 8081
-npm run build     # production bundle in ui-react/dist, served by FastAPI at /v2
+npm run dev       # dev server on http://localhost:5173 (proxies /llm-review, /docs to 8081)
+npm run build     # production bundle in ui-react/dist, served by FastAPI at /
 ```
 
-The switch of `/` to the React UI (and the retirement of the vanilla one) will happen after validation.
+The build is mounted only when `ui-react/dist` exists, so the backend and tests run without a compiled frontend. (The original vanilla-JS UI was retired once the React port reached full parity.)
 
 ## Scripts
 

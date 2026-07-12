@@ -52,7 +52,6 @@ const router = createBrowserRouter(
       ],
     },
   ],
-  { basename: '/v2' },
 );
 
 createRoot(document.getElementById('root')!).render(

@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from uvicorn.logging import DefaultFormatter
-from config import Config, UI_REACT_DIST_DIR, get_ui_dir
+from config import Config, UI_REACT_DIST_DIR
 
 # 1. Configure logging and load configuration
 config = Config()
@@ -36,36 +36,27 @@ app = FastAPI(lifespan=lifespan, title=config.app_name, version=config.app_versi
 app.include_router(dev_router)
 
 
-class NoCacheStaticFiles(StaticFiles):
-    """Serve the UI with no-cache: browsers keep stale JS modules across
-    deploys otherwise (dev app, tiny files — revalidating every time is fine)."""
-
-    def file_response(self, *args, **kwargs):
-        response = super().file_response(*args, **kwargs)
-        response.headers["Cache-Control"] = "no-cache"
-        return response
-
-
-class SpaStaticFiles(NoCacheStaticFiles):
-    """SPA fallback: unknown paths serve index.html so client-side routes
-    (e.g. /v2/storico) survive a browser refresh."""
+class SpaStaticFiles(StaticFiles):
+    """Serve the built React SPA: no-cache headers (so browsers don't keep
+    stale modules across deploys) plus an index.html fallback so client-side
+    routes survive a browser refresh."""
 
     async def get_response(self, path, scope):
         try:
             response = await super().get_response(path, scope)
+            if response.status_code == 404:
+                response = await super().get_response("index.html", scope)
         except StarletteHTTPException as exc:
             if exc.status_code != 404:
                 raise
-            return await super().get_response("index.html", scope)
-        if response.status_code == 404:
-            return await super().get_response("index.html", scope)
+            response = await super().get_response("index.html", scope)
+        response.headers["Cache-Control"] = "no-cache"
         return response
 
 
-# React UI (built bundle) under /v2 — mounted only when the build exists,
-# so backend tests and API-only setups don't require Node. The vanilla UI
-# stays on / until the migration is validated.
+# The React build is served at the root. The mount is added last, so the API
+# router (/llm-review) and the docs routes (/docs, /openapi.json) still win;
+# it only catches everything else. Guarded on the build existing so the
+# backend (and tests) run without a compiled frontend.
 if UI_REACT_DIST_DIR.is_dir():
-    app.mount("/v2", SpaStaticFiles(directory=UI_REACT_DIST_DIR, html=True), name="ui-react")
-
-app.mount("/", NoCacheStaticFiles(directory=get_ui_dir(), html=True), name="ui")
+    app.mount("/", SpaStaticFiles(directory=UI_REACT_DIST_DIR, html=True), name="ui")
