@@ -33,11 +33,11 @@ class PaperRepository:
     # ------------------------------------------------------------------
 
     def list(self) -> list[Paper]:
-        """All papers, ordered by path, with a live run count as num_review."""
+        """All papers, ordered by path. num_review is the stored column, kept
+        in sync on run save (and refreshed on seed)."""
         with Session(self._engine) as session:
             rows = session.exec(select(PaperTable).order_by(PaperTable.paper_path)).all()
-            counts = self._run_counts(session)
-        return [self._to_model(row, counts.get(row.paper_path, 0)) for row in rows]
+        return [self._to_model(row) for row in rows]
 
     def list_paths(self) -> list[str]:
         """Paper paths only (used by RetrievalService.list_papers)."""
@@ -54,8 +54,7 @@ class PaperRepository:
                 .where(PaperTable.paper_type == PaperType.OPEN_REVIEW.value)
                 .order_by(PaperTable.paper_path)
             ).all()
-            counts = self._run_counts(session)
-        return [self._to_model(row, counts.get(row.paper_path, 0)) for row in rows]
+        return [self._to_model(row) for row in rows]
 
     def get_by_path(self, paper_path: str) -> Paper:
         """Raises ValueError if the paper is not in the catalog."""
@@ -65,8 +64,7 @@ class PaperRepository:
             ).first()
             if row is None:
                 raise ValueError(f"Paper not found: {paper_path}")
-            count = self._run_counts(session).get(paper_path, 0)
-        return self._to_model(row, count)
+        return self._to_model(row)
 
     # ------------------------------------------------------------------
     # Seed
@@ -152,7 +150,7 @@ class PaperRepository:
         return {paper_path: count for paper_path, count in rows}
 
     @staticmethod
-    def _to_model(row: PaperTable, num_review: int) -> Paper:
+    def _to_model(row: PaperTable) -> Paper:
         return Paper(
             id=row.id,
             paper_path=row.paper_path,
@@ -162,5 +160,5 @@ class PaperRepository:
             conference=row.conference,
             openreview_api_version=row.openreview_api_version,
             decision=row.decision,
-            num_review=num_review,
+            num_review=row.num_review,
         )

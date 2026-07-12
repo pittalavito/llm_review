@@ -18,8 +18,10 @@ from sqlmodel import Session, select
 from models.agent import AgentName
 from models.run_record import AgentRun, RunRecord, RunSummary
 
+from sqlalchemy import func
+
 from domain.db.mappers import record_to_rows, row_to_agent_run, rows_to_record
-from domain.db.tables import AgentRunTable, PromptVersionTable, RunTable
+from domain.db.tables import AgentRunTable, PaperTable, PromptVersionTable, RunTable
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +57,24 @@ class ResultRepository:
                 config_row.prompt_version_id = self._resolve_prompt_version_id(session, config_row.agent_name, config_row.prompt_version)
             session.add_all(agent_rows)
             session.add_all(config_rows)
+            self._refresh_paper_num_review(session, record.paper_path)
             session.commit()
         logger.info("Run saved: %s", record.run_id)
         return record.run_id
+
+    @staticmethod
+    def _refresh_paper_num_review(session: Session, paper_path: str) -> None:
+        """Keep paper.num_review in sync with the number of runs for the paper.
+        No-op when the paper is not in the catalog (its runs still count once
+        it gets seeded)."""
+        paper = session.exec(select(PaperTable).where(PaperTable.paper_path == paper_path)).first()
+        if paper is None:
+            return
+        count = session.exec(
+            select(func.count()).select_from(RunTable).where(RunTable.paper_path == paper_path)
+        ).one()
+        paper.num_review = int(count)
+        session.add(paper)
 
     def list(self) -> list[RunSummary]:
         """Return all run summaries, most recent first.
