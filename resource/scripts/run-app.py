@@ -2,10 +2,15 @@ import shutil
 import subprocess
 import sys
 
-from _env import PROJECT_ROOT, env_value
+from utils import env_value, get_project_root
 
-port = env_value("APP_PORT", "8081")
-host = env_value("APP_HOST", "0.0.0.0")
+### CONFIGURATION ###
+
+PROJECT_ROOT = get_project_root()
+PORT = env_value("APP_PORT", "8081")
+HOST = env_value("APP_HOST", "0.0.0.0")
+
+### EXECUTE ###
 
 uv = shutil.which("uv")
 if uv:
@@ -19,7 +24,7 @@ if sync.returncode != 0:
 
 result = subprocess.run(
     cmd_prefix + ["run", "uvicorn", "main:app", "--app-dir", "src", "--reload",
-                  "--host", host, "--port", port],
+                  "--host", HOST, "--port", PORT],
     cwd=PROJECT_ROOT,
 )
 sys.exit(result.returncode)

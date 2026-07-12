@@ -1,7 +1,7 @@
 import sys
 import psutil
 
-preview = "--preview" in sys.argv
+PREVIEW = "--preview" in sys.argv
 
 def is_target(proc: psutil.Process) -> bool:
     try:
@@ -26,7 +26,7 @@ print(f"Found {len(targets)} app process(es):")
 for proc in targets:
     try:
         print(f"- PID={proc.pid} Name={proc.name()}")
-        if preview:
+        if PREVIEW:
             print("  Preview: would stop this process")
         else:
             proc.kill()
@@ -34,7 +34,7 @@ for proc in targets:
     except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
         print(f"  Warning: could not stop process: {e}")
 
-if preview:
+if PREVIEW:
     print("Preview completed. No process was terminated.")
 else:
     print("Stop completed.")
