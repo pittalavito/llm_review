@@ -72,12 +72,12 @@ class Config(BaseSettings):
     anthropic_api_key: str | None = None
 
     # --- Database ---
-    database_url: str | None = None         # None -> sqlite:///{DB_DIR}/llm-review.sqlite
+    database_url: str | None = None   
     db_echo: bool = False
 
     # --- Redis ---
-    redis_url: str | None = None       # None/empty -> RAG indices kept in memory (not persisted)
-    redis_index_ttl_seconds: int = 0   # 0 = permanent store (no expiry); >0 sets a TTL per index
+    redis_url: str | None = None       
+    redis_index_ttl_seconds: int = 0
 
     # --- Retrieval ---
     rag_chunk_size: int = 800

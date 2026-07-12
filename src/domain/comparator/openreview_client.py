@@ -28,7 +28,6 @@ class OpenReviewClient:
         if cached is not None:
             logger.info("Using cached OpenReview notes for %s (%d notes)", cache_name, len(cached))
             return cached
-
         base = _BASE_V2 if api_version == "v2" else _BASE_V1
         url = f"{base}/notes"
         params = {"forum": forum_id, "limit": 1000}
