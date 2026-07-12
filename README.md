@@ -124,13 +124,13 @@ There are deliberately no schema migrations (no Alembic): after a schema change,
 
 `GET /llm-review/backup` (or the **Backup DB** section of the React UI) builds an in-memory ZIP of the whole database and streams it as a download — the browser chooses where to save it. Layout: one subfolder per table, each with a CSV of the scalar/indexed columns and one JSON file per record for the JSON-payload columns, plus a `manifest.json` (timestamp, app version, per-table row counts).
 
-### Redis cache for RAG indices
+### Redis store for RAG indices
 
-BM25 indices (JSON files keyed by SHA-256 under `resource/rag-index/`) are served through a **cache-aside** Redis layer: files remain the source of truth, Redis is a pure read accelerator. If `REDIS_URL` is unset or Redis is unreachable, the app transparently falls back to file-only access (single warning, no crash).
+BM25 indices (keyed by SHA-256 of the paper path) are stored in **Redis** — the primary store, kept permanently (`noeviction`, AOF persistence), no more JSON files on disk. Indices are derived data (rebuildable from the paper via BM25), so a miss just triggers a rebuild. If `REDIS_URL` is unset or Redis is unreachable the app falls back to an **in-memory** store (per-process, not persisted): it keeps working and tests run without a Redis server.
 
 ```
 docker compose -f resource/docker/docker-compose.redis.yml up -d
-# starts redis:7.4-alpine on localhost:6380
+# starts redis:7.4-alpine on localhost:6380 (+ redis-commander on 8083)
 # .env: REDIS_URL=redis://localhost:6380/0
 ```
 

@@ -34,9 +34,6 @@ Thumbs.db
 # uv
 .uv/
 
-# retrieval cache
-resource/rag-index/*.json
-
 # sqlite database (incl. WAL sidecar files)
 resource/db/
 

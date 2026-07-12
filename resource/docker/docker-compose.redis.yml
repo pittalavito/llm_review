@@ -9,9 +9,11 @@ services:
     container_name: llm-review-redis
     ports:
       - "6380:6379"
-    # allkeys-lru: honest policy for a pure cache; AOF + volume keep the
-    # warm cache across container restarts.
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    # noeviction: Redis is the primary store for RAG indices, not a cache —
+    # never silently drop keys. AOF + volume persist them across restarts.
+    # (Indices are rebuildable from the papers, so this is durability, not a
+    # hard requirement.)
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis-data:/data
     healthcheck:
