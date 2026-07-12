@@ -25,6 +25,7 @@ const PIPELINE_ENTRIES: NavEntry[] = [
   { to: '/graph-run', icon: '▶', label: 'Graph Run' },
   { to: '/storico', icon: '⏱', label: 'Storico Review' },
   { to: '/comparison', icon: '⇄', label: 'Confronto Review' },
+  { to: '/backup', icon: '⬇', label: 'Backup DB' },
 ];
 
 function NavItem({ entry }: { entry: NavEntry }) {

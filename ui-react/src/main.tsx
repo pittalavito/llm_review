@@ -28,6 +28,7 @@ import GraphRun from './sections/GraphRun';
 import Compare from './sections/Compare';
 import Swagger from './sections/Swagger';
 import RedisDashboard from './sections/RedisDashboard';
+import Backup from './sections/Backup';
 
 const router = createBrowserRouter(
   [
@@ -46,6 +47,7 @@ const router = createBrowserRouter(
         { path: 'graph-run', element: <GraphRun /> },
         { path: 'storico', element: <Storico /> },
         { path: 'comparison', element: <Compare /> },
+        { path: 'backup', element: <Backup /> },
         { path: '*', element: <Navigate to="/health" replace /> },
       ],
     },

@@ -188,4 +188,18 @@ export const listComparablePapers = () => get<ComparablePaper[]>('/compare/paper
 export const comparePaper = (paperPath: string) =>
   get<PaperComparison>('/compare', { paper_path: paperPath });
 
+// ---------------------------------------------------------------------------
+// Backup
+// ---------------------------------------------------------------------------
+
+/** Download the whole-DB backup as a ZIP blob (filename from Content-Disposition). */
+export async function downloadBackup(): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(`${BASE_URL}/backup`);
+  await throwForResponse(res);
+  const blob = await res.blob();
+  const disposition = res.headers.get('content-disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  return { blob, filename: match ? match[1] : 'db-backup.zip' };
+}
+
 export type { AgentLLMConfig };
