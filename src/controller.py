@@ -1,7 +1,7 @@
 import logging
 
 from container import Container, inject_container
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from models.agent import AgentName, LlmModelName
 from models.graph import GraphAgentConfig
@@ -32,6 +32,7 @@ URI_RUNS_ID = "/runs/{run_id}"
 URI_RUN_AGENT_RUNS = "/runs/{run_id}/agent-runs"
 URI_COMPARE_PAPERS = "/compare/papers"
 URI_COMPARE = "/compare"
+URI_BACKUP = "/backup"
 
 
 @router.get(URI_HEALTH, response_model=dict)
@@ -282,6 +283,21 @@ def get_run_agent_runs(run_id: str, agent_name: AgentName | None = None, round_i
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise _http_error(exc, f"Load agent runs for '{run_id}'") from exc
+
+
+@router.get(URI_BACKUP)
+def download_backup(container: Container = Depends(inject_container)) -> Response:
+    """Export the whole database as an in-memory ZIP and stream it as a download."""
+
+    try:
+        zip_bytes, filename = container.backup_service.build_zip()
+        return Response(
+            content=zip_bytes,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except Exception as exc:
+        raise _http_error(exc, "DB backup") from exc
 
 
 def _http_error(exc: Exception, action: str, status: int = 500) -> HTTPException:

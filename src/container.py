@@ -10,6 +10,7 @@ from service.agent_service import AgentService
 from service.retrieval_service import RetrievalService
 from service.comparator_service import ReviewComparatorService
 from service.repository_service import RepositoryService
+from service.backup_service import BackupService
 
 class Container:
     """DI container: builds and exposes the services, plus the few
@@ -22,6 +23,8 @@ class Container:
         self.repository_service = RepositoryService(self.engine)
         self.repository_service.seed_defaults(DEFAULT_PROMPT_SEEDS)
         
+        self.backup_service = BackupService(self.engine, config)
+
         self.agent_service = AgentService(config)
         self.retrieval_service = RetrievalService(config)
         self.graph_service = GraphService(config, self.retrieval_service, self.repository_service)

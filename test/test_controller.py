@@ -441,3 +441,35 @@ class TestPromptEndpoints:
         by_name = {a["agent_name"]: a for a in updated["agents"]}
         assert by_name["reviewer_1"]["prompt_version"] == "v2"
         assert by_name["reviewer_2"]["prompt_version"] == "v1"
+
+
+# ---------------------------------------------------------------------------
+# Backup
+# ---------------------------------------------------------------------------
+
+class TestBackupEndpoint:
+
+    def test_returns_zip_attachment(self, client):
+        import io
+        import zipfile
+
+        r = client.get("/llm-review/backup")
+        assert r.status_code == 200
+        assert r.headers["content-type"] == "application/zip"
+        disposition = r.headers["content-disposition"]
+        assert disposition.startswith("attachment; filename=")
+        assert disposition.endswith('.zip"')
+
+        archive = zipfile.ZipFile(io.BytesIO(r.content))
+        names = archive.namelist()
+        assert "manifest.json" in names
+        # one subfolder per table, seeded prompt versions present
+        assert any(n.startswith("prompt_version/") for n in names)
+
+    def test_error_returns_500(self, client):
+        with patch(
+            "service.backup_service.BackupService.build_zip",
+            side_effect=RuntimeError("boom"),
+        ):
+            r = client.get("/llm-review/backup")
+        assert r.status_code == 500
