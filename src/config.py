@@ -15,7 +15,6 @@ OPENREVIEW_INDEX_DIR = RESOURCE_DIR / "open-review-index.json"
 OPENREVIEW_DIR = RESOURCE_DIR / "openreview"
 
 PAPERS_DIR = RESOURCE_DIR / "papers"
-RAG_INDEX_DIR = RESOURCE_DIR / "rag-index"
 
 DB_DIR = RESOURCE_DIR / "db"
 
@@ -33,10 +32,6 @@ def get_papers_dir() -> Path:
     """Get the papers directory path."""
     return PAPERS_DIR.resolve()
 
-
-def get_rag_index_dir() -> Path:
-    """Get the RAG index directory path."""
-    return RAG_INDEX_DIR.resolve()
 
 def get_db_dir() -> Path:
     """Get the database directory path."""
@@ -81,8 +76,8 @@ class Config(BaseSettings):
     db_echo: bool = False
 
     # --- Redis ---
-    redis_url: str | None = None            # None -> RAG indices served from files only
-    redis_index_ttl_seconds: int = 604_800  # 7 days; 0 = cache entries never expire
+    redis_url: str | None = None       # None/empty -> RAG indices kept in memory (not persisted)
+    redis_index_ttl_seconds: int = 0   # 0 = permanent store (no expiry); >0 sets a TTL per index
 
     # --- Retrieval ---
     rag_chunk_size: int = 800

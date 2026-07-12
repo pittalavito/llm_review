@@ -1,10 +1,10 @@
 import logging
 
-from domain.retrieval.cache import build_index_repository
+from domain.redis.retrieval_index_repository import build_index_repository
 from domain.retrieval.indexing import IndexBuilder, PaperFileReader
 from domain.retrieval.ranking import BM25Ranker, BM25Tokenizer, ContextBuilder
 from models.retrieval import FileSignature, Index, IndexInfo, RetrievalMetadata
-from config import Config, get_papers_dir, get_rag_index_dir
+from config import Config, get_papers_dir
 
 
 logger = logging.getLogger(__name__)
@@ -16,13 +16,12 @@ class RetrievalService:
         
         
         papers_dir = get_papers_dir()
-        index_dir = get_rag_index_dir()
         tokenizer = BM25Tokenizer()
-        
+
         self.config = config
         self._ranker = BM25Ranker(tokenizer)
         self._file_adapter = PaperFileReader(papers_dir)
-        self._index_repository = build_index_repository(config, index_dir)
+        self._retrieval_index_repository = build_index_repository(config)
         self._index_builder = IndexBuilder(tokenizer, config)
         self._context_builder = ContextBuilder(max_context_chars=config.rag_max_context_chars)
 
@@ -45,8 +44,8 @@ class RetrievalService:
         logger.info(f"{_LOGGER_PREFIX} Getting index metadata for paper: {paper_path}")
         
         _, relative_path = self._file_adapter.resolve_paper_path(paper_path)
-        doc_id = self._index_repository.compute_doc_id(relative_path)
-        index_payload = self._index_repository.load(doc_id)
+        doc_id = self._retrieval_index_repository.compute_doc_id(relative_path)
+        index_payload = self._retrieval_index_repository.load(doc_id)
         
         if index_payload is None:
             raise ValueError(f"No index found for paper: {relative_path}")
@@ -64,7 +63,7 @@ class RetrievalService:
         
         logger.info(f"{_LOGGER_PREFIX} Listing indexed papers")
         
-        return self._index_repository.list_indexed()
+        return self._retrieval_index_repository.list_indexed()
 
     def index_paper(self, paper_path: str, force_reindex: bool = False) -> RetrievalMetadata:
         """Build or reuse the BM25 index for a paper. Returns indexing metadata."""
@@ -72,10 +71,10 @@ class RetrievalService:
         logger.info(f"{_LOGGER_PREFIX} Indexing paper: {paper_path} with force_reindex={force_reindex}")
         
         resolved_path, relative_path = self._file_adapter.resolve_paper_path(paper_path)
-        doc_id = self._index_repository.compute_doc_id(relative_path)
+        doc_id = self._retrieval_index_repository.compute_doc_id(relative_path)
         file_signature = self._file_adapter.build_file_signature(resolved_path)
 
-        index_payload = self._index_repository.load(doc_id)
+        index_payload = self._retrieval_index_repository.load(doc_id)
         
         if force_reindex or not self._is_index_valid(index_payload, relative_path, file_signature):
             index_payload = self._build_index(resolved_path, relative_path, doc_id, file_signature)
@@ -100,8 +99,8 @@ class RetrievalService:
         """
         
         _, relative_path = self._file_adapter.resolve_paper_path(paper_path)
-        doc_id = self._index_repository.compute_doc_id(relative_path)
-        index_payload = self._index_repository.load(doc_id)
+        doc_id = self._retrieval_index_repository.compute_doc_id(relative_path)
+        index_payload = self._retrieval_index_repository.load(doc_id)
 
         if index_payload is None:
             return ""
@@ -125,11 +124,11 @@ class RetrievalService:
         logger.info(f"{_LOGGER_PREFIX} Retrieving context for paper: {paper_path} for sections: {sections}, top_k: {top_k}")
         
         resolved_path, relative_path = self._file_adapter.resolve_paper_path(paper_path)
-        doc_id = self._index_repository.compute_doc_id(relative_path)
+        doc_id = self._retrieval_index_repository.compute_doc_id(relative_path)
         top_k_value = top_k or self.config.rag_top_k_default
         file_signature = self._file_adapter.build_file_signature(resolved_path)
 
-        index_payload = self._index_repository.load(doc_id)
+        index_payload = self._retrieval_index_repository.load(doc_id)
         if not self._is_index_valid(index_payload, relative_path, file_signature):
             index_payload = self._build_index(resolved_path, relative_path, doc_id, file_signature)
 
@@ -142,7 +141,7 @@ class RetrievalService:
         
         text = self._file_adapter.extract_text(source_path)        
         payload = self._index_builder.build_index(text, relative_path, doc_id, file_signature)
-        self._index_repository.save(payload)
+        self._retrieval_index_repository.save(payload)
         return payload
 
     def _is_index_valid(self, payload: Index | None, relative_path: str, file_signature: FileSignature) -> bool:

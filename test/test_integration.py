@@ -185,7 +185,7 @@ class TestRetrievalService:
         assert isinstance(ctx, str)
 
     def test_retrieve_for_agent_rebuilds_if_invalid(self, svc, monkeypatch):
-        monkeypatch.setattr(svc._index_repository, "load", lambda _: None)
+        monkeypatch.setattr(svc._retrieval_index_repository, "load", lambda _: None)
         assert isinstance(svc.retrieve_for_agent(PAPER_PATH, query="model architecture"), str)
 
     # -- get_indexed_paper ----------------------------------------------------
@@ -196,7 +196,7 @@ class TestRetrievalService:
         assert info.paper_path == PAPER_PATH and info.chunk_count > 0
 
     def test_get_indexed_paper_not_indexed_raises(self, svc, monkeypatch):
-        monkeypatch.setattr(svc._index_repository, "load", lambda _: None)
+        monkeypatch.setattr(svc._retrieval_index_repository, "load", lambda _: None)
         with pytest.raises(ValueError, match="No index found"):
             svc.get_indexed_paper(PAPER_PATH)
 
@@ -213,38 +213,38 @@ class TestRetrievalService:
         assert svc._is_index_valid(None, PAPER_PATH, FileSignature(mtime_ns=0, size=0)) is False
 
     def test_is_index_valid_path_mismatch(self, svc):
-        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        index = svc._retrieval_index_repository.load(svc._retrieval_index_repository.compute_doc_id(PAPER_PATH))
         bad = copy.copy(index)
         object.__setattr__(bad, "paper_path", "wrong/path.pdf")
         assert svc._is_index_valid(bad, PAPER_PATH, index.file_signature) is False
 
     def test_is_index_valid_mtime_mismatch(self, svc):
-        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        index = svc._retrieval_index_repository.load(svc._retrieval_index_repository.compute_doc_id(PAPER_PATH))
         assert svc._is_index_valid(index, PAPER_PATH, FileSignature(mtime_ns=0, size=index.file_signature.size)) is False
 
     def test_is_index_valid_size_mismatch(self, svc):
-        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        index = svc._retrieval_index_repository.load(svc._retrieval_index_repository.compute_doc_id(PAPER_PATH))
         assert svc._is_index_valid(index, PAPER_PATH, FileSignature(mtime_ns=index.file_signature.mtime_ns, size=0)) is False
 
     def test_is_index_valid_chunk_size_mismatch(self, svc, monkeypatch):
-        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        index = svc._retrieval_index_repository.load(svc._retrieval_index_repository.compute_doc_id(PAPER_PATH))
         fs = svc._file_adapter.build_file_signature(svc._file_adapter.papers_dir / PAPER_PATH)
         monkeypatch.setattr(svc.config, "rag_chunk_size", 9999)
         assert svc._is_index_valid(index, PAPER_PATH, fs) is False
 
     def test_is_index_valid_chunk_overlap_mismatch(self, svc, monkeypatch):
-        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        index = svc._retrieval_index_repository.load(svc._retrieval_index_repository.compute_doc_id(PAPER_PATH))
         fs = svc._file_adapter.build_file_signature(svc._file_adapter.papers_dir / PAPER_PATH)
         monkeypatch.setattr(svc.config, "rag_chunk_overlap", 9999)
         assert svc._is_index_valid(index, PAPER_PATH, fs) is False
 
     def test_is_index_valid_strategy_version_mismatch(self, svc, monkeypatch):
-        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        index = svc._retrieval_index_repository.load(svc._retrieval_index_repository.compute_doc_id(PAPER_PATH))
         fs = svc._file_adapter.build_file_signature(svc._file_adapter.papers_dir / PAPER_PATH)
         monkeypatch.setattr(svc.config, "rag_strategy_version", "old-version")
         assert svc._is_index_valid(index, PAPER_PATH, fs) is False
 
     def test_is_index_valid_happy_path(self, svc):
-        index = svc._index_repository.load(svc._index_repository.compute_doc_id(PAPER_PATH))
+        index = svc._retrieval_index_repository.load(svc._retrieval_index_repository.compute_doc_id(PAPER_PATH))
         fs = svc._file_adapter.build_file_signature(svc._file_adapter.papers_dir / PAPER_PATH)
         assert svc._is_index_valid(index, PAPER_PATH, fs) is True
