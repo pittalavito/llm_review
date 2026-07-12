@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).resolve().parents[2]
 coverage_target = str(project_root / "src")
 
 uv = shutil.which("uv")

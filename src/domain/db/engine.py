@@ -1,7 +1,7 @@
 """Engine factory and schema creation for the SQLite persistence layer.
 
 Schema migrations are intentionally out of scope (no Alembic): the database
-is always rebuildable from the JSON archive via scripts/import-runs.py, so
+is always rebuildable from the JSON archive via resource/scripts/import-runs.py, so
 dropping the file and re-importing is the migration path.
 """
 

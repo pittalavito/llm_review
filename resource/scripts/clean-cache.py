@@ -4,7 +4,7 @@ from pathlib import Path
 
 preview = "--preview" in sys.argv
 include_venv = "--include-venv" in sys.argv
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).resolve().parents[2]
 
 def is_excluded(path: Path) -> bool:
     return not include_venv and ".venv" in path.parts

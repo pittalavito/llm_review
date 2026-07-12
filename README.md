@@ -115,7 +115,7 @@ GROUP BY c.model, c.persona_focus;
 Legacy JSON runs under `resource/results/` can be imported (idempotent) with:
 
 ```
-uv run python scripts/import-runs.py
+uv run python resource/scripts/import-runs.py
 ```
 
 There are deliberately no schema migrations (no Alembic): after a schema change, delete `resource/db/llm-review.sqlite*` and re-run the import — the JSON archive remains the recovery source.
@@ -152,16 +152,16 @@ The switch of `/` to the React UI (and the retirement of the vanilla one) will h
 
 ## Scripts
 
-All cross-platform Python. Run with `uv run python scripts/<name>.py`.
+All cross-platform Python. Run with `uv run python resource/scripts/<name>.py` (the scripts live under `resource/scripts/`).
 
 | Script | Command | Description |
 |---|---|---|
-| start-venv | `uv run python scripts/start-venv.py` | Create `.venv` and install dependencies |
-| run-app | `uv run python scripts/run-app.py` | Start uvicorn on port 8081 |
-| run-test | `uv run python scripts/run-test.py` | Run pytest with coverage |
-| stop-app | `uv run python scripts/stop-app.py` | Kill the uvicorn process |
-| clean-cache | `uv run python scripts/clean-cache.py` | Remove Python cache artifacts |
-| import-runs | `uv run python scripts/import-runs.py` | Import legacy JSON runs into SQLite (idempotent) |
+| start-venv | `uv run python resource/scripts/start-venv.py` | Create `.venv` and install dependencies |
+| run-app | `uv run python resource/scripts/run-app.py` | Start uvicorn (port from `APP_PORT` in .env, default 8081) |
+| run-test | `uv run python resource/scripts/run-test.py` | Run pytest with coverage |
+| stop-app | `uv run python resource/scripts/stop-app.py` | Kill the uvicorn process |
+| clean-cache | `uv run python resource/scripts/clean-cache.py` | Remove Python cache artifacts |
+| import-runs | `uv run python resource/scripts/import-runs.py` | Import legacy JSON runs into SQLite (idempotent) |
 
 ## Todo / Future work
 

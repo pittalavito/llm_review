@@ -4,7 +4,7 @@ import sys
 import webbrowser
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).resolve().parents[2]
 compose_file = project_root / "resource" / "docker" / "docker-compose.redis.yml"
 
 DASHBOARD_URL = "http://localhost:8083"
