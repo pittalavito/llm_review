@@ -44,7 +44,10 @@ class ReviewComparatorService:
             raise ValueError(f"Paper has no OpenReview id: {paper_path}")
         api_version = paper.openreview_api_version or "v1"
 
-        notes = self._client.fetch_notes(forum_id, api_version, cache_name=paper_path)
+        # Cache files under resource/openreview/ are keyed by the paper stem
+        # (no extension), so strip it to hit the existing local cache.
+        cache_name = Path(paper_path).stem
+        notes = self._client.fetch_notes(forum_id, api_version, cache_name=cache_name)
         human_reviews = self._parser.parse_reviews(notes)
         human_meta = self._parser.parse_meta_review(notes)
         human_decision: str = paper.decision or self._parser.parse_decision(notes) or "unknown"
