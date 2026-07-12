@@ -16,6 +16,7 @@ from sqlmodel import Field, SQLModel
 
 _AGENT_NAMES_SQL = ("('reviewer_1','reviewer_2','reviewer_3','meta_reviewer','area_chair','author_agent')")
 _AGENT_ROLES_SQL = "('reviewer','meta_reviewer','area_chair','author_agent')"
+_PAPER_TYPES_SQL = "('OPEN_REVIEW','OTHER')"
 
 
 class RunTable(SQLModel, table=True):
@@ -97,6 +98,30 @@ class PromptVersionTable(SQLModel, table=True):
     description: str | None = None
     created_at: str         
     is_active: bool = True
+
+
+class PaperTable(SQLModel, table=True):
+    """Catalog of papers available to the pipeline. Seeded from
+    resource/papers/ + open-review-index.json (now a seed-only source).
+    OpenReview metadata columns are NULL for OTHER papers. num_review is a
+    snapshot of the run count for the paper, refreshed on (re)seed."""
+
+    __tablename__ = "paper"
+    __table_args__ = (
+        CheckConstraint(f"paper_type IN {_PAPER_TYPES_SQL}", name="ck_paper_type"),
+        CheckConstraint("num_review >= 0", name="ck_paper_num_review"),
+        UniqueConstraint("paper_path", name="uq_paper_path"),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    paper_path: str = Field(index=True)   # relative filename, e.g. "2580_....pdf"
+    paper_name: str
+    paper_type: str
+    open_review_id: str | None = None     # OpenReview forum id (OPEN_REVIEW only)
+    conference: str | None = None
+    openreview_api_version: str | None = None
+    decision: str | None = None           # human decision (OpenReview)
+    num_review: int = 0                    # snapshot of run count; recomputed live on read
 
 
 class RunAgentConfigTable(SQLModel, table=True):

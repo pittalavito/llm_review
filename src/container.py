@@ -1,5 +1,5 @@
 from fastapi import Request
-from config import Config, get_openreview_index_dir, get_openreview_dir
+from config import Config, get_openreview_index_dir, get_openreview_dir, get_papers_dir
 
 from domain.db.engine import create_db_engine
 from domain.agent.prompting.catalog import DEFAULT_PROMPT_SEEDS
@@ -22,6 +22,7 @@ class Container:
         
         self.repository_service = RepositoryService(self.engine)
         self.repository_service.seed_defaults(DEFAULT_PROMPT_SEEDS)
+        self.repository_service.seed_papers(get_papers_dir(), get_openreview_index_dir())
         
         self.backup_service = BackupService(self.engine, config)
 
