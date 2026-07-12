@@ -16,6 +16,7 @@ URI_MODELS = "/models"
 URI_TEST_LLM = "/test-llm"
 URI_AGENTS = "/agents"
 URI_PAPERS = "/papers"
+URI_PAPERS_CATALOG = "/papers/catalog"
 URI_INDEX_PAPER = "/papers/index"
 URI_INDEXED_PAPERS = "/papers/indexed"
 URI_INDEXED_PAPER_DETAIL = "/papers/indexed/detail"
@@ -69,9 +70,16 @@ def list_agents() -> list[AgentName]:
 
 @router.get(URI_PAPERS)
 def list_papers(container: Container = Depends(inject_container)) -> list[str]:
-    """List available papers."""
-    
-    return container.retrieval_service.list_papers()
+    """List available paper paths (from the paper catalog)."""
+
+    return container.repository_service.list_paper_paths()
+
+
+@router.get(URI_PAPERS_CATALOG)
+def list_papers_catalog(container: Container = Depends(inject_container)) -> list[dict]:
+    """Full paper catalog: type, OpenReview id, run count, etc."""
+
+    return [paper.model_dump() for paper in container.repository_service.list_papers_catalog()]
 
 
 @router.post(URI_INDEX_PAPER)

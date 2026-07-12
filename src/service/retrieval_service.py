@@ -25,19 +25,6 @@ class RetrievalService:
         self._index_builder = IndexBuilder(tokenizer, config)
         self._context_builder = ContextBuilder(max_context_chars=config.rag_max_context_chars)
 
-    def list_papers(self) -> list[str]:
-        """Return relative paths of all available paper files."""
-        
-        logger.info(f"{_LOGGER_PREFIX} Listing papers in directory: {get_papers_dir()}")
-        
-        papers_dir = self._file_adapter.papers_dir
-        
-        return sorted(
-            f.relative_to(papers_dir).as_posix()
-            for f in papers_dir.rglob("*")
-            if f.is_file() and f.suffix.lower() in {'.pdf', '.txt'}
-        )
-
     def get_indexed_paper(self, paper_path: str) -> IndexInfo:
         """Return index metadata for a specific paper. Raises ValueError if not indexed."""
         

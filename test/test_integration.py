@@ -80,7 +80,7 @@ class TestContainer:
         assert container.config.app_version
 
     def test_list_papers_returns_list(self, container):
-        assert isinstance(container.retrieval_service.list_papers(), list)
+        assert isinstance(container.repository_service.list_paper_paths(), list)
 
     def test_list_indexed_papers_returns_list(self, container):
         assert isinstance(container.retrieval_service.list_indexed_papers(), list)
@@ -147,11 +147,6 @@ class TestRetrievalService:
     @pytest.fixture(scope="class")
     def svc(self):
         return RetrievalService(Config())
-
-    # -- list_papers ----------------------------------------------------------
-
-    def test_list_papers_contains_known_paper(self, svc):
-        assert PAPER_PATH in svc.list_papers()
 
     # -- index_paper ----------------------------------------------------------
 

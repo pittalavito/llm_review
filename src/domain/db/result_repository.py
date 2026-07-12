@@ -99,6 +99,15 @@ class ResultRepository:
             )
         ).first()
 
+    def list_run_ids_for_paper(self, paper_path: str) -> list[str]:
+        """Run ids for a paper, most recent first (used by the comparator)."""
+        with Session(self._engine) as session:
+            return list(session.exec(
+                select(RunTable.run_id)
+                .where(RunTable.paper_path == paper_path)
+                .order_by(RunTable.run_id.desc())
+            ).all())
+
     def get(self, run_id: str) -> RunRecord:
         """Load a full RunRecord by run_id. Raises ValueError if not found."""
         

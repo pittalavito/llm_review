@@ -48,6 +48,9 @@ class RepositoryService:
     ) -> list[AgentRun]:
         return self._result_repository.get_agent_runs(run_id, agent_name=agent_name, round_index=round_index)
 
+    def get_run_ids_for_paper(self, paper_path: str) -> list[str]:
+        return self._result_repository.list_run_ids_for_paper(paper_path)
+
     # ------------------------------------------------------------------
     # Prompt versions
     # ------------------------------------------------------------------

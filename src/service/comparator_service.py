@@ -1,4 +1,3 @@
-import json
 import logging
 
 from pathlib import Path
@@ -18,47 +17,44 @@ _REJECT_KW = {"reject"}
 
 
 class ReviewComparatorService:
+    """Compares human OpenReview reviews against the LLM runs for a paper.
+    Paper metadata comes from the paper table (via the repository); the run
+    list is derived from the run table by paper_path."""
 
-    def __init__(
-        self, 
-        repository_service: RepositoryService, 
-        index_path: Path, 
-        cache_dir: Path | None = None
-    ):
+    def __init__(self, repository_service: RepositoryService, cache_dir: Path | None = None):
         self._repo = repository_service
-        self._index: list[dict] = json.loads(index_path.read_text(encoding="utf-8"))
         self._client = OpenReviewClient(cache_dir=cache_dir)
         self._parser = HumanReviewParser()
 
     def list_papers(self) -> list[dict]:
-        """List all papers in the index with their title and conference."""
-        
+        """List OpenReview papers with their title and conference."""
         return [
             {
-                "paper_path": e["paper_path"], 
-                "title": e.get("title", ""), 
-                "conference": e.get("conference", "")
+                "paper_path": paper.paper_path,
+                "title": paper.paper_name,
+                "conference": paper.conference or "",
             }
-            for e in self._index
+            for paper in self._repo.list_openreview_papers()
         ]
 
     def compare_paper(self, paper_path: str) -> PaperComparison:
-        entry = self._find_entry(paper_path)
-        forum_id: str = entry["openreview_forum_id"]
-        api_version: str = entry.get("openreview_api_version", "v1")
+        paper = self._repo.get_paper(paper_path)  # ValueError if unknown
+        forum_id = paper.open_review_id
+        if not forum_id:
+            raise ValueError(f"Paper has no OpenReview id: {paper_path}")
+        api_version = paper.openreview_api_version or "v1"
 
         notes = self._client.fetch_notes(forum_id, api_version, cache_name=paper_path)
         human_reviews = self._parser.parse_reviews(notes)
         human_meta = self._parser.parse_meta_review(notes)
-        human_decision: str = entry.get("decision") or self._parser.parse_decision(notes) or "unknown"
+        human_decision: str = paper.decision or self._parser.parse_decision(notes) or "unknown"
 
         run_comparisons: list[PaperComparisonResult] = []
-        for run_ref in entry.get("runs_system_promt_v1", []):
-            run_id: str = run_ref["run_id"]
+        for run_id in self._repo.get_run_ids_for_paper(paper_path):
             try:
                 record = self._repo.get_run(run_id)
             except ValueError:
-                logger.warning("Run not found on disk: %s", run_id)
+                logger.warning("Run not found: %s", run_id)
                 continue
 
             llm_reviews = self._extract_llm_reviews(record)
@@ -80,19 +76,13 @@ class ReviewComparatorService:
 
         return PaperComparison(
             paper_path=paper_path,
-            title=entry.get("title", ""),
+            title=paper.paper_name,
             forum_id=forum_id,
-            conference=entry.get("conference", ""),
+            conference=paper.conference or "",
             human_decision=human_decision,
             human_reviews=human_reviews,
             run_comparisons=run_comparisons,
         )
-
-    def _find_entry(self, paper_path: str) -> dict:
-        for entry in self._index:
-            if entry["paper_path"] == paper_path:
-                return entry
-        raise ValueError(f"Paper not found in index: {paper_path}")
 
     def _extract_llm_reviews(self, record) -> list[LLMReview]:
         reviews = []

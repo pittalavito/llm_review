@@ -30,7 +30,7 @@ class Container:
         self.retrieval_service = RetrievalService(config)
         self.graph_service = GraphService(config, self.retrieval_service, self.repository_service)
         
-        self.comparator = ReviewComparatorService(repository_service=self.repository_service, index_path=get_openreview_index_dir(), cache_dir=get_openreview_dir())
+        self.comparator = ReviewComparatorService(repository_service=self.repository_service, cache_dir=get_openreview_dir())
 
     def test_agent_with_retrieval(self, name, model, temperature, message: str, paper_path: str, top_k: int | None = None):
         """Run an agent using RAG context retrieved from a paper — agent drives its own retrieval."""

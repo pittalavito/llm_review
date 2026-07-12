@@ -97,6 +97,11 @@ PROMPT_VERSION 1 ──< RUN_AGENT_CONFIG   (which base prompt each agent used)
 | `agent_run` | run_id FK, agent, round, rating, confidence, overall_score, decision, latency_ms, input/output/total_tokens | response_payload, prompt_trace, runtime_trace |
 | `run_agent_config` | run_id FK, agent_name, model, temperature, prompt_version (+FK), persona axes, area_chair_style | — |
 | `prompt_version` | agent_role, version_label (UNIQUE pair), template, template_hash, description, is_active | — |
+| `paper` | paper_path (UNIQUE), paper_name, paper_type (OPEN_REVIEW/OTHER), open_review_id, conference, decision, num_review | — |
+
+### Paper catalog
+
+The available papers live in the `paper` table, seeded at startup (idempotently) from `resource/papers/` and `open-review-index.json` — which is now a **seed-only** source, no longer read at runtime. Papers listed in the index are `OPEN_REVIEW` (with `open_review_id`/conference/decision); folder-only papers are `OTHER`. `num_review` is the number of runs recorded for the paper (counted live from the `run` table). `GET /papers` (paths) and `GET /papers/catalog` (full rows) read from it; the comparison feature resolves OpenReview metadata and the paper's runs from the DB.
 
 ### Prompt versioning
 

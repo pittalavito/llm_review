@@ -211,6 +211,15 @@ class TestPapersEndpoint:
     def test_list_papers_returns_list(self, client):
         assert isinstance(client.get("/llm-review/papers").json(), list)
 
+    def test_catalog_returns_paper_rows(self, client):
+        r = client.get("/llm-review/papers/catalog")
+        assert r.status_code == 200
+        rows = r.json()
+        assert isinstance(rows, list) and rows
+        row = rows[0]
+        assert {"paper_path", "paper_name", "paper_type", "num_review"} <= row.keys()
+        assert {r["paper_type"] for r in rows} <= {"OPEN_REVIEW", "OTHER"}
+
     def test_list_indexed_returns_200(self, client):
         assert client.get("/llm-review/papers/indexed").status_code == 200
 
